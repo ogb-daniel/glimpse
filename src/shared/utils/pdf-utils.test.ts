@@ -34,12 +34,12 @@ describe('pdf-utils', () => {
       // Mock window.location
       const originalLocation = window.location;
       // @ts-ignore
-      delete window.location;
-      window.location = { ...originalLocation, pathname: '/test.pdf' };
+      delete (window as any).location;
+      (window as any).location = { ...originalLocation, pathname: '/test.pdf' };
       
       expect(isPdfDocument()).toBe(true);
       
-      window.location = originalLocation;
+      (window as any).location = originalLocation;
     });
 
     it('should return false for regular html', () => {

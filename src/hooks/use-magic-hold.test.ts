@@ -221,4 +221,30 @@ describe('useMagicHold', () => {
 
     expect(result.current.isTriggered).toBe(false);
   });
+
+  describe('PDF support', () => {
+    beforeEach(() => {
+      // Mock PDF document
+      Object.defineProperty(document, 'contentType', {
+        value: 'application/pdf',
+        configurable: true,
+      });
+      // Mock window.getSelection to return empty
+      (window.getSelection as any).mockReturnValue({
+        toString: () => '',
+        rangeCount: 0
+      });
+    });
+
+    it('should start holding on PDF even if window.getSelection is empty', () => {
+      const { result } = renderHook(() => useMagicHold());
+
+      act(() => {
+        window.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 50, clientY: 50 }));
+      });
+
+      expect(result.current.isHolding).toBe(true);
+      expect(result.current.position).toEqual({ x: 50, y: 50 });
+    });
+  });
 });
