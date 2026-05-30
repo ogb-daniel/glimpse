@@ -4,12 +4,16 @@ export default defineBackground(() => {
   console.log('Glimpse: Background service worker initializing...', { id: browser.runtime.id });
 
   // Handle installation event
-  browser.runtime.onInstalled.addListener(({ reason }) => {
-    if (reason === 'install') {
-      browser.tabs.create({
+  browser.runtime.onInstalled.addListener(async ({ reason }) => {
+    const STORAGE_KEY_WELCOME_SHOWN = "glimpse_has_seen_welcome";
+    const { [STORAGE_KEY_WELCOME_SHOWN]: welcomeShown } = await browser.storage.local.get(STORAGE_KEY_WELCOME_SHOWN);
+
+    if (reason === 'install' || !welcomeShown) {
+      await browser.tabs.create({
         url: browser.runtime.getURL('/welcome.html'),
         active: true,
       });
+      await browser.storage.local.set({ [STORAGE_KEY_WELCOME_SHOWN]: true });
     }
   });
 

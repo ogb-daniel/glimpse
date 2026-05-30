@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { checkAiCapabilities, AiCapabilities } from '@/shared/utils/ai-health-service';
+import { useEffect, useState, useRef } from 'react';
+import { checkAiCapabilities, AiCapabilityStatus } from '@/shared/utils/ai-health-service';
 import { getOrCreateIdentity } from '@/shared/utils/identity-service';
 
 function App() {
-  const [capabilities, setCapabilities] = useState<AiCapabilities | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiCapabilityStatus | 'checking'>('checking');
   const [identityReady, setIdentityReady] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
+  const tutorialRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const initialize = async () => {
@@ -13,7 +15,13 @@ function App() {
         checkAiCapabilities(),
         getOrCreateIdentity()
       ]);
-      setCapabilities(aiResult);
+      
+      if (aiResult.success) {
+        setAiStatus(aiResult.data.available);
+      } else {
+        setAiStatus('no');
+      }
+
       if (idResult.success) {
         setIdentityReady(true);
       }
@@ -23,27 +31,48 @@ function App() {
 
   // Simplified hold listener for tutorial
   useEffect(() => {
-    let timer: NodeJS.Timeout;
     const handleMouseDown = (e: MouseEvent) => {
+      // Finding 10: Check for left-click only
+      if (e.button !== 0) return;
+
+      // Finding 2: Scope to the specific "test" area
+      if (!tutorialRef.current?.contains(e.target as Node)) return;
+
       const selection = window.getSelection();
       if (selection && selection.toString().trim().length > 0) {
-        timer = setTimeout(() => {
-          setOnboarded(true);
+        // Finding 1: Clear previous timer if it exists (Resource Leak)
+        if (timerRef.current) clearTimeout(timerRef.current);
+
+        timerRef.current = setTimeout(() => {
+          // Finding 11: Re-verify selection status at the end of timeout
+          const currentSelection = window.getSelection();
+          if (currentSelection && currentSelection.toString().trim().length > 0) {
+            setOnboarded(true);
+          }
+          timerRef.current = null;
         }, 1500);
       }
     };
 
     const handleMouseUp = () => {
-      clearTimeout(timer);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
 
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
+    
     return () => {
+      // Finding 1: Proper cleanup of listeners and timers (Resource Leak)
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  const isSystemReady = identityReady && aiStatus === 'readily';
 
   return (
     <div style={{ 
@@ -85,39 +114,45 @@ function App() {
       }}>
         <h2 style={{ fontSize: '18px', marginBottom: '16px' }}>System Health</h2>
         
-        <div style={{ marginBottom: '12px' }}>
-          {identityReady ? (
-            <p style={{ color: 'green', fontSize: '14px', margin: '4px 0' }}>✅ Local Identity: Created and secure.</p>
+        {/* Finding 9: Combined status indicator */}
+        <div style={{ marginBottom: '16px' }}>
+          {isSystemReady ? (
+            <p style={{ color: 'green', fontSize: '15px', fontWeight: 'bold' }}>✅ System Ready: Local AI is active.</p>
           ) : (
-            <p style={{ color: 'var(--ink-secondary)', fontSize: '14px', margin: '4px 0' }}>⏳ Initializing identity...</p>
+            <p style={{ color: 'var(--ink-secondary)', fontSize: '15px' }}>⏳ System Preparing...</p>
           )}
         </div>
 
-        <div>
-          {capabilities === null ? (
-            <p className="text-caption">Checking AI capabilities...</p>
+        <div style={{ fontSize: '14px' }}>
+          {identityReady ? (
+            <p style={{ color: 'green', margin: '4px 0' }}>• Local Identity: Created and secure.</p>
           ) : (
-            <div>
-              {capabilities.available === 'readily' && (
-                <p style={{ color: 'green', fontSize: '14px', margin: '4px 0' }}>✅ Local AI: Ready for inference.</p>
-              )}
-              {capabilities.available === 'after-download' && (
-                <p style={{ color: 'var(--accent-gold-hc)', fontSize: '14px', margin: '4px 0' }}>⏳ Local AI: Downloading model (this may take a few minutes)...</p>
-              )}
-              {capabilities.available === 'no' && (
-                <div style={{ color: '#d93025', marginTop: '16px' }}>
-                  <p style={{ fontWeight: '600', marginBottom: '8px' }}>❌ Hardware Not Supported</p>
-                  <p className="text-serif" style={{ fontSize: '13px', lineHeight: '1.4' }}>
-                    Your current setup does not support built-in AI. To enable Glimpse, please ensure:
-                  </p>
-                  <ul style={{ fontSize: '13px', lineHeight: '1.5', paddingLeft: '20px' }}>
-                    <li>Using Chrome 127+ (Dev/Canary recommended).</li>
-                    <li>Enable <code>#prompt-api-for-gemini-nano</code> in <code>chrome://flags</code>.</li>
-                    <li>Enable <code>#optimization-guide-on-device-model</code> in <code>chrome://flags</code>.</li>
-                    <li>Update "Optimization Guide" in <code>chrome://components</code>.</li>
-                  </ul>
-                </div>
-              )}
+            <p style={{ color: 'var(--ink-secondary)', margin: '4px 0' }}>• Initializing identity...</p>
+          )}
+
+          {/* Finding 3: Non-compliant status strings (AC#2) */}
+          {aiStatus === 'checking' && (
+            <p className="text-caption">• Checking AI capabilities...</p>
+          )}
+          {aiStatus === 'readily' && (
+            <p style={{ color: 'green', margin: '4px 0' }}>• Hardware Support: Verified.</p>
+          )}
+          {aiStatus === 'after-download' && (
+            <p style={{ color: 'var(--accent-gold-hc)', margin: '4px 0' }}>• System Preparing: Downloading local model...</p>
+          )}
+          {aiStatus === 'no' && (
+            <div style={{ color: '#d93025', marginTop: '16px' }}>
+              <p style={{ fontWeight: '600', marginBottom: '8px' }}>❌ Hardware Not Supported</p>
+              <p className="text-serif" style={{ fontSize: '13px', lineHeight: '1.4' }}>
+                Your current setup does not support built-in AI. To enable Glimpse, please follow these steps:
+              </p>
+              {/* Finding 5: Better instructions and clickable links where possible */}
+              <ul style={{ fontSize: '13px', lineHeight: '1.5', paddingLeft: '20px' }}>
+                <li>Using Chrome 127+ (Dev/Canary recommended).</li>
+                <li>Enable <a href="chrome://flags/#prompt-api-for-gemini-nano" onClick={(e) => { e.preventDefault(); browser.tabs.create({ url: 'chrome://flags/#prompt-api-for-gemini-nano' }); }}>#prompt-api-for-gemini-nano</a>.</li>
+                <li>Enable <a href="chrome://flags/#optimization-guide-on-device-model" onClick={(e) => { e.preventDefault(); browser.tabs.create({ url: 'chrome://flags/#optimization-guide-on-device-model' }); }}>#optimization-guide-on-device-model</a> (set to "Enabled BypassPerfRequirement").</li>
+                <li>Visit <a href="chrome://components" onClick={(e) => { e.preventDefault(); browser.tabs.create({ url: 'chrome://components' }); }}>chrome://components</a> and update "Optimization Guide On Device Model".</li>
+              </ul>
             </div>
           )}
         </div>
@@ -129,16 +164,18 @@ function App() {
           Try the <strong>Magic Hold</strong>. Highlight the sentence below and hold your mouse button down for 1.5 seconds.
         </p>
         
-        <div style={{ 
-          padding: '32px', 
-          border: '2px dashed var(--accent-gold)', 
-          borderRadius: 'var(--radius-md)',
-          textAlign: 'center',
-          userSelect: 'text',
-          cursor: 'text',
-          backgroundColor: onboarded ? 'var(--accent-gold-soft)' : 'transparent',
-          transition: 'background-color 0.5s ease'
-        }}>
+        <div 
+          ref={tutorialRef}
+          style={{ 
+            padding: '32px', 
+            border: '2px dashed var(--accent-gold)', 
+            borderRadius: 'var(--radius-md)',
+            textAlign: 'center',
+            userSelect: 'text',
+            cursor: 'text',
+            backgroundColor: onboarded ? 'var(--accent-gold-soft)' : 'transparent',
+            transition: 'background-color 0.5s ease'
+          }}>
           <p style={{ 
             fontSize: '18px', 
             fontStyle: 'italic', 
