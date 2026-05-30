@@ -1,12 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { AppMessage } from '../shared/types/messaging';
 import { extractPageMetadata } from '../shared/utils/metadata-utils';
+import { useScrapbook } from './use-scrapbook';
 
 export function useAiStream() {
   const [streamingText, setStreamingText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<{ message: string; code?: string } | null>(null);
   const portRef = useRef<ReturnType<typeof browser.runtime.connect> | null>(null);
+  const { saveInteraction } = useScrapbook();
 
   const cleanup = useCallback(() => {
     if (portRef.current) {
@@ -45,6 +47,11 @@ export function useAiStream() {
         // Finding 10: Prevent flickering if chunks arrive out of order (though rare on ports)
         setStreamingText(prev => msg.payload.token.length > prev.length ? msg.payload.token : prev);
       } else if (msg.type === 'AI_STREAM_COMPLETE') {
+        saveInteraction({
+          term: contextText,
+          explanation: msg.payload.fullText,
+          domainUrl: metadata.url
+        }).catch(err => console.error('Failed to auto-save interaction:', err));
         cleanup();
       } else if (msg.type === 'AI_STREAM_ERROR') {
         setError({ message: msg.payload.error, code: msg.payload.code });
@@ -57,7 +64,7 @@ export function useAiStream() {
       setIsStreaming(false);
       portRef.current = null;
     });
-  }, [isStreaming, cleanup]);
+  }, [isStreaming, cleanup, saveInteraction]);
 
   const resetStream = useCallback(() => {
     setStreamingText('');
