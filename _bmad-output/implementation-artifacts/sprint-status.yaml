@@ -57,7 +57,7 @@ development_status:
   epic-3: in-progress
   3-1-dexie-js-schema-auto-save: done
   3-2-side-panel-scrapbook-dashboard: done
-  3-3-codex-underlining-implementation: backlog
+  3-3-codex-underlining-implementation: done
   3-4-bloom-transition-popover-to-side-panel: backlog
   epic-3-retrospective: optional
   epic-4: backlog
