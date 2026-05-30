@@ -45,8 +45,21 @@ export function useScrapbook() {
     }
   }, []);
 
+  const getInteractionByTerm = useCallback(async (term: string): Promise<DbResult<UserScrapbook | undefined>> => {
+    try {
+      const entry = await db.userScrapbook.where('term').equalsIgnoreCase(term).first();
+      return { success: true, data: entry };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown database error'
+      };
+    }
+  }, []);
+
   return {
     saveInteraction,
-    deleteInteraction
+    deleteInteraction,
+    getInteractionByTerm
   };
 }

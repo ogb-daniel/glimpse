@@ -164,3 +164,18 @@ h1, h2, h3, h4, h5, h6 {
   border-width: 0;
 }
 
+
+/* Codex Underlining */
+.glimpse-codex-underline {
+  text-decoration: none;
+  cursor: help;
+  transition: text-decoration 0.2s ease;
+}
+
+.glimpse-codex-underline.active {
+  text-decoration: underline 1px solid var(--accent-gold);
+}
+
+.glimpse-codex-underline:hover {
+  background-color: var(--accent-gold-soft);
+}

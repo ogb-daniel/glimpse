@@ -2,15 +2,31 @@ import ReactDOM from 'react-dom/client';
 import React from 'react';
 import { useMagicHold } from '@/hooks/use-magic-hold';
 import { useAiStream } from '@/hooks/use-ai-stream';
+import { useCodexUnderliner } from '@/hooks/use-codex-underliner';
+import { useScrapbook } from '@/hooks/use-scrapbook';
 import { MagicHoldAnimation } from '@/components/overlays/MagicHoldAnimation';
 import { TacticalPopover } from '@/components/overlays/TacticalPopover';
+import { CodexTooltip } from '@/components/overlays/CodexTooltip';
 import { isPdfDocument, getNativePdfSelection, getPdfFallbackText } from '@/shared/utils/pdf-utils';
 import '@/assets/main.css';
 
 const ContentApp: React.FC = () => {
   const { isHolding, isTriggered, position, dismiss } = useMagicHold();
   const { streamingText, isStreaming, error, startStream, resetStream } = useAiStream();
+  const { getInteractionByTerm } = useScrapbook();
   const [capturedTerm, setCapturedTerm] = React.useState<string>('');
+  
+  // Codex Tooltip State
+  const [tooltipData, setTooltipData] = React.useState<{
+    term: string;
+    learnedAt: number;
+    domainUrl: string;
+    position: { x: number; y: number };
+  } | null>(null);
+  const hoverTimer = React.useRef<any>(null);
+
+  // Initialize Underliner
+  useCodexUnderliner();
 
   const handleDeepChat = async () => {
     if (capturedTerm && streamingText) {
@@ -33,6 +49,57 @@ const ContentApp: React.FC = () => {
     browser.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
     dismiss();
   };
+
+  React.useEffect(() => {
+    const handleMouseOver = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('glimpse-codex-underline')) {
+        const term = target.dataset.term;
+        if (!term) return;
+
+        if (hoverTimer.current) clearTimeout(hoverTimer.current);
+        
+        hoverTimer.current = setTimeout(async () => {
+          const result = await getInteractionByTerm(term);
+          if (result.success && result.data) {
+            const rect = target.getBoundingClientRect();
+            setTooltipData({
+              term: result.data.term,
+              learnedAt: result.data.learnedAt,
+              domainUrl: result.data.domainUrl,
+              position: { x: rect.left + rect.width / 2, y: rect.top }
+            });
+          }
+        }, 1000); // 1s delay per AC #3
+      } else if (!target.closest('.codex-tooltip')) {
+        clearTooltip();
+      }
+    };
+
+    const clearTooltip = () => {
+      if (hoverTimer.current) {
+        clearTimeout(hoverTimer.current);
+        hoverTimer.current = null;
+      }
+      setTooltipData(null);
+    };
+
+    const handleMouseOut = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('glimpse-codex-underline')) {
+        clearTooltip();
+      }
+    };
+
+    window.addEventListener('mouseover', handleMouseOver);
+    window.addEventListener('mouseout', handleMouseOut);
+
+    return () => {
+      window.removeEventListener('mouseover', handleMouseOver);
+      window.removeEventListener('mouseout', handleMouseOut);
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    };
+  }, [getInteractionByTerm]);
 
   React.useEffect(() => {
     const fetchAndStart = async () => {
@@ -94,6 +161,12 @@ const ContentApp: React.FC = () => {
         isStreaming={isStreaming}
         error={error}
         onDeepChat={handleDeepChat}
+      />
+      <CodexTooltip 
+        term={tooltipData?.term || ''}
+        learnedAt={tooltipData?.learnedAt || 0}
+        domainUrl={tooltipData?.domainUrl || ''}
+        position={tooltipData?.position || null}
       />
     </>
   );
