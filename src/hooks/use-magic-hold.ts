@@ -103,7 +103,10 @@ export function useMagicHold() {
   useEffect(() => {
     const handleSelectionChange = () => {
       const selection = window.getSelection();
-      if (!selection || selection.toString().trim().length === 0) {
+      const text = selection?.toString().trim() ?? '';
+      
+      // If selection is cleared, always reset
+      if (text.length === 0) {
         setIsTriggered(false);
         setPosition(null);
       }

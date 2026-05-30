@@ -161,4 +161,57 @@ describe('useMagicHold', () => {
 
     expect(result.current.isHolding).toBe(false);
   });
+
+  it('should reset isTriggered when dismiss is called', () => {
+    (window.getSelection as any).mockReturnValue({
+      toString: () => 'selected text',
+      rangeCount: 1,
+      getRangeAt: () => ({
+        getBoundingClientRect: () => ({ left: 0, top: 0, right: 100, bottom: 100 }),
+      }),
+    });
+
+    const { result } = renderHook(() => useMagicHold());
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 50, clientY: 50 }));
+      vi.advanceTimersByTime(1500);
+    });
+
+    expect(result.current.isTriggered).toBe(true);
+
+    act(() => {
+      result.current.dismiss();
+    });
+
+    expect(result.current.isTriggered).toBe(false);
+    expect(result.current.position).toBe(null);
+  });
+
+  it('should reset isTriggered when selection is cleared', () => {
+    const mockSelection = {
+      toString: vi.fn().mockReturnValue('selected text'),
+      rangeCount: 1,
+      getRangeAt: () => ({
+        getBoundingClientRect: () => ({ left: 0, top: 0, right: 100, bottom: 100 }),
+      }),
+    };
+    (window.getSelection as any).mockReturnValue(mockSelection);
+
+    const { result } = renderHook(() => useMagicHold());
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 50, clientY: 50 }));
+      vi.advanceTimersByTime(1500);
+    });
+
+    expect(result.current.isTriggered).toBe(true);
+
+    act(() => {
+      mockSelection.toString.mockReturnValue('');
+      document.dispatchEvent(new Event('selectionchange'));
+    });
+
+    expect(result.current.isTriggered).toBe(false);
+  });
 });
