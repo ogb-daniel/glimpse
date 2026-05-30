@@ -4,6 +4,7 @@ import { useMagicHold } from '@/hooks/use-magic-hold';
 import { useAiStream } from '@/hooks/use-ai-stream';
 import { MagicHoldAnimation } from '@/components/overlays/MagicHoldAnimation';
 import { TacticalPopover } from '@/components/overlays/TacticalPopover';
+import { isPdfDocument, getNativePdfSelection } from '@/shared/utils/pdf-utils';
 import '@/assets/main.css';
 
 const ContentApp: React.FC = () => {
@@ -34,18 +35,31 @@ const ContentApp: React.FC = () => {
   };
 
   React.useEffect(() => {
-    if (isTriggered) {
-      const selection = window.getSelection();
-      const text = selection?.toString().trim() || '';
-      if (text.length > 0) {
-        setCapturedTerm(text);
-        startStream(text);
+    const fetchAndStart = async () => {
+      if (isTriggered) {
+        let text = '';
+        if (isPdfDocument()) {
+          text = await getNativePdfSelection();
+        } else {
+          const selection = window.getSelection();
+          text = selection?.toString().trim() || '';
+        }
+
+        if (text.length > 0) {
+          setCapturedTerm(text);
+          startStream(text);
+        } else {
+          // If we triggered but somehow got no text, dismiss
+          dismiss();
+        }
+      } else {
+        setCapturedTerm('');
+        resetStream();
       }
-    } else {
-      setCapturedTerm('');
-      resetStream();
-    }
-  }, [isTriggered, startStream, resetStream]);
+    };
+
+    fetchAndStart();
+  }, [isTriggered, startStream, resetStream, dismiss]);
 
   React.useEffect(() => {
     if (!isTriggered) return;
