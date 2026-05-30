@@ -4,7 +4,7 @@ import { useMagicHold } from '@/hooks/use-magic-hold';
 import { useAiStream } from '@/hooks/use-ai-stream';
 import { MagicHoldAnimation } from '@/components/overlays/MagicHoldAnimation';
 import { TacticalPopover } from '@/components/overlays/TacticalPopover';
-import { isPdfDocument, getNativePdfSelection } from '@/shared/utils/pdf-utils';
+import { isPdfDocument, getNativePdfSelection, getPdfFallbackText } from '@/shared/utils/pdf-utils';
 import '@/assets/main.css';
 
 const ContentApp: React.FC = () => {
@@ -39,7 +39,13 @@ const ContentApp: React.FC = () => {
       if (isTriggered) {
         let text = '';
         if (isPdfDocument()) {
+          // Attempt native bridge first
           text = await getNativePdfSelection();
+          
+          // Patch: Fallback to PDF.js extraction if native selection is empty (e.g. non-standard viewer)
+          if (!text) {
+            text = await getPdfFallbackText(window.location.href);
+          }
         } else {
           const selection = window.getSelection();
           text = selection?.toString().trim() || '';
@@ -72,6 +78,11 @@ const ContentApp: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTriggered, dismiss]);
+
+  // Patch: Guard against rendering in tiny iframes where the UI would be clipped
+  if (typeof window !== 'undefined' && window.innerWidth < 100) {
+    return null;
+  }
 
   return (
     <>

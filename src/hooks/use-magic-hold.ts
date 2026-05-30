@@ -8,12 +8,16 @@ export function useMagicHold() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dismiss = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     setIsTriggered(false);
     setPosition(null);
   }, []);
 
   useEffect(() => {
-    const handleMouseDown = async (e: MouseEvent) => {
+    const handleMouseDown = (e: MouseEvent) => {
       // Finding 3: Reset triggered state on any new click
       dismiss();
 
@@ -45,9 +49,6 @@ export function useMagicHold() {
         setIsHolding(true);
         setPosition({ x: e.clientX, y: e.clientY });
 
-        if (timerRef.current) clearTimeout(timerRef.current);
-
-        // Finding 1: Move mousemove/mouseup to local listeners for performance
         const cleanup = () => {
           if (timerRef.current) {
             clearTimeout(timerRef.current);
@@ -80,7 +81,6 @@ export function useMagicHold() {
                 cleanup();
               }
             } else {
-              // Finding 6: Cancel if selection is lost
               cleanup();
             }
           }
@@ -90,25 +90,27 @@ export function useMagicHold() {
         window.addEventListener('mouseup', handleMouseUp, { once: true });
 
         timerRef.current = setTimeout(async () => {
+          const currentTimerId = timerRef.current;
+          
           let hasSelection = false;
+          let pdfText = '';
+          
           if (isPDF) {
-            const pdfText = await getNativePdfSelection();
-            if (pdfText.length > 0) {
-              hasSelection = true;
-            }
+            pdfText = await getNativePdfSelection();
+            hasSelection = pdfText.length > 0;
           } else {
             const finalSelection = window.getSelection();
             const finalText = finalSelection?.toString().trim() ?? '';
-            if (finalText.length > 0) {
-              hasSelection = true;
-            }
+            hasSelection = finalText.length > 0;
           }
+
+          // Guard: Ensure user is still holding and hasn't cancelled during the await
+          if (timerRef.current !== currentTimerId) return;
 
           if (hasSelection) {
             setIsTriggered(true);
           }
           
-          // Finding 3: isHolding should be false once triggered or cancelled
           setIsHolding(false);
           timerRef.current = null;
           window.removeEventListener('mousemove', handleMouseMove);
@@ -125,14 +127,13 @@ export function useMagicHold() {
     };
   }, [dismiss]);
 
-  // Finding 3: Reset triggered state when selection changes
   useEffect(() => {
     const handleSelectionChange = () => {
       const selection = window.getSelection();
       const text = selection?.toString().trim() ?? '';
       
-      // If selection is cleared, always reset
-      if (text.length === 0 && !isPdfDocument()) {
+      // In PDFs, selectionchange event is not reliable, but we still clear if it explicitly goes to 0
+      if (text.length === 0) {
         setIsTriggered(false);
       }
     };

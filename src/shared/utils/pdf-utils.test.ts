@@ -66,7 +66,7 @@ describe('pdf-utils', () => {
 
       const result = await promise;
       expect(result).toBe('hello pdf');
-      expect(mockEmbed.postMessage).toHaveBeenCalledWith({ type: 'getSelectedText' }, '*');
+      expect(mockEmbed.postMessage).toHaveBeenCalledWith({ type: 'getSelectedText' }, window.location.origin);
     });
 
     it('should return empty string on timeout', async () => {
