@@ -1,3 +1,17 @@
+import { getOrCreateIdentity } from "../shared/utils/identity-service";
+
 export default defineBackground(() => {
-  console.log('Hello background!', { id: browser.runtime.id });
+  console.log('Glimpse: Background service worker initializing...', { id: browser.runtime.id });
+
+  // Initialize Local Identity on startup
+  getOrCreateIdentity().then((result) => {
+    if (result.success) {
+      console.log("Glimpse: Identity initialized successfully.", { 
+        publicKey: result.data.publicKey,
+        createdAt: result.data.createdAt 
+      });
+    } else {
+      console.error("Glimpse: Identity initialization failed.", result.error);
+    }
+  });
 });
