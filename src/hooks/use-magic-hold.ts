@@ -117,5 +117,9 @@ export function useMagicHold() {
     isHolding,
     isTriggered,
     position,
+    dismiss: () => {
+      setIsTriggered(false);
+      setPosition(null);
+    },
   };
 }

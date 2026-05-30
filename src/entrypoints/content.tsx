@@ -2,11 +2,28 @@ import ReactDOM from 'react-dom/client';
 import React from 'react';
 import { useMagicHold } from '@/hooks/use-magic-hold';
 import { MagicHoldAnimation } from '@/components/overlays/MagicHoldAnimation';
+import { TacticalPopover } from '@/components/overlays/TacticalPopover';
 import '@/assets/main.css';
 
 const ContentApp: React.FC = () => {
-  const { isHolding, position } = useMagicHold();
-  return <MagicHoldAnimation position={isHolding ? position : null} />;
+  const { isHolding, isTriggered, position, dismiss } = useMagicHold();
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        dismiss();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dismiss]);
+
+  return (
+    <>
+      <MagicHoldAnimation position={isHolding ? position : null} />
+      <TacticalPopover position={position} isVisible={isTriggered} />
+    </>
+  );
 };
 
 export default defineContentScript({
