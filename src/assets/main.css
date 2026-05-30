@@ -91,3 +91,26 @@ h1, h2, h3, h4, h5, h6 {
   animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
+/* Tactical Popover */
+.tactical-popover {
+  z-index: 2147483647; /* Fallback for when not on top layer, but ideally redundant */
+  max-width: 340px;
+  min-width: 200px;
+}
+
+.popover-content {
+  background-color: var(--surface-overlay);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-popover);
+  padding: var(--spacing-4);
+  color: var(--ink-primary);
+}
+
+.popover-content header {
+  border-bottom: 1px solid var(--border-hairline);
+  margin-bottom: var(--spacing-2);
+  padding-bottom: var(--spacing-1);
+}
+
