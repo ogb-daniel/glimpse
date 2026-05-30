@@ -1,5 +1,5 @@
 # generated: 2026-05-30T10:00:00.000Z
-# last_updated: 2026-05-30T13:30:00Z
+# last_updated: 2026-05-30T16:00:00Z
 # project: plain
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-30T10:00:00.000Z
-last_updated: 2026-05-30T13:30:00Z
+last_updated: 2026-05-30T16:00:00Z
 project: plain
 project_key: NOKEY
 tracking_system: file-system
@@ -52,10 +52,10 @@ development_status:
   2-2-shadow-dom-popover-framework: done
   2-3-port-based-ai-bridge-background-worker: done
   2-4-streaming-tactical-popover-ui: done
-  2-5-pdf-support: backlog
+  2-5-pdf-support: done
   epic-2-retrospective: optional
-  epic-3: backlog
-  3-1-dexie-js-schema-auto-save: backlog
+  epic-3: in-progress
+  3-1-dexie-js-schema-auto-save: in-progress
   3-2-side-panel-scrapbook-dashboard: backlog
   3-3-codex-underlining-implementation: backlog
   3-4-bloom-transition-popover-to-side-panel: backlog
