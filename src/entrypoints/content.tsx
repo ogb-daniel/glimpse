@@ -10,6 +10,13 @@ const ContentApp: React.FC = () => {
   const { isHolding, isTriggered, position, dismiss } = useMagicHold();
   const { streamingText, isStreaming, error, startStream, resetStream } = useAiStream();
 
+  const handleDeepChat = () => {
+    // browser.sidePanel.open is not available in content script directly
+    // We send a message to background to open it
+    browser.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
+    dismiss();
+  };
+
   React.useEffect(() => {
     if (isTriggered) {
       const selection = window.getSelection();
@@ -44,6 +51,7 @@ const ContentApp: React.FC = () => {
         streamingText={streamingText}
         isStreaming={isStreaming}
         error={error}
+        onDeepChat={handleDeepChat}
       />
     </>
   );

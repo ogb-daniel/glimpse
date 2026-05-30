@@ -19,6 +19,13 @@
   --radius-md: 4px;
   --radius-lg: 8px;
 
+  /* Spacing */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+
   /* Typography Families */
   --font-serif: "Source Serif Pro", Georgia, serif;
   --font-sans: "Inter", system-ui, sans-serif;
@@ -101,15 +108,47 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--surface-overlay);
   backdrop-filter: blur(8px);
   border: 1px solid var(--border-hairline);
+  border-top: 3px solid var(--accent-gold);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-popover);
   padding: var(--spacing-4);
   color: var(--ink-primary);
+  overflow: hidden;
 }
 
 .popover-content header {
   border-bottom: 1px solid var(--border-hairline);
   margin-bottom: var(--spacing-2);
   padding-bottom: var(--spacing-1);
+}
+
+.popover-footer {
+  margin-top: var(--spacing-3);
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-hairline);
+  padding-top: var(--spacing-2);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--ink-secondary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.btn-ghost:hover {
+  background-color: var(--surface-raised);
+  color: var(--accent-gold-hc);
 }
 

@@ -80,6 +80,16 @@ export default defineBackground(() => {
     });
   });
 
+  // Handle messages from content scripts (non-port based)
+  browser.runtime.onMessage.addListener((msg: AppMessage, sender) => {
+    if (msg.type === 'OPEN_SIDE_PANEL') {
+      if (sender.tab?.id) {
+        // @ts-ignore - browser.sidePanel might not be in the types yet
+        browser.sidePanel.open({ tabId: sender.tab.id });
+      }
+    }
+  });
+
   // Initialize Local Identity on startup
   getOrCreateIdentity().then((result) => {
     if (result.success) {

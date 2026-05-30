@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
+import { useThemeSniffer } from '@/hooks/use-theme-sniffer';
 
 interface Props {
   position: { x: number; y: number } | null;
@@ -6,6 +7,7 @@ interface Props {
   streamingText?: string;
   isStreaming?: boolean;
   error?: { message: string; code?: string } | null;
+  onDeepChat?: () => void;
 }
 
 export const TacticalPopover: React.FC<Props> = ({ 
@@ -13,10 +15,14 @@ export const TacticalPopover: React.FC<Props> = ({
   isVisible,
   streamingText,
   isStreaming,
-  error 
+  error,
+  onDeepChat
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
+
+  // Finding 3: Adapt to host theme by sniffing CSS variables
+  useThemeSniffer(popoverRef);
 
   useLayoutEffect(() => {
     if (isVisible && position && popoverRef.current) {
@@ -71,6 +77,13 @@ export const TacticalPopover: React.FC<Props> = ({
             <p className="text-serif">{streamingText || (isStreaming ? 'Synthesizing...' : '')}</p>
           )}
         </main>
+        {!error && !isStreaming && streamingText && (
+          <footer className="popover-footer">
+            <button className="btn-ghost" onClick={onDeepChat}>
+              Deep Chat ↗
+            </button>
+          </footer>
+        )}
       </div>
     </div>
   );
