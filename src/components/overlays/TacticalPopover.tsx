@@ -20,33 +20,70 @@ export const TacticalPopover: React.FC<Props> = ({
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
+  
+  // Drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number, y: number, startLeft: number, startTop: number } | null>(null);
 
   // Finding 3: Adapt to host theme by sniffing CSS variables
   useThemeSniffer(popoverRef);
 
   useLayoutEffect(() => {
-    if (isVisible && position && popoverRef.current) {
+    // Only set initial coords once per appearance to allow dragging later
+    if (isVisible && position && popoverRef.current && !coords) {
       const popover = popoverRef.current;
-      const { width, height } = popover.getBoundingClientRect();
+      const { width } = popover.getBoundingClientRect();
       
       let left = position.x - width / 2;
       let top = position.y + 10;
 
-      // Viewport boundary detection
       const padding = 10;
       if (left < padding) left = padding;
-      if (left + width > window.innerWidth - padding) {
-        left = window.innerWidth - width - padding;
-      }
-      if (top + height > window.innerHeight - padding) {
-        top = position.y - height - 10;
-      }
 
       setCoords({ left, top });
-    } else {
+    } else if (!isVisible) {
       setCoords(null);
     }
+    // Intentionally excluding coords so it doesn't reset position during drag
   }, [isVisible, position]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleDragMove = (e: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const dx = e.pageX - dragStartRef.current.x;
+      const dy = e.pageY - dragStartRef.current.y;
+      setCoords({
+        left: dragStartRef.current.startLeft + dx,
+        top: dragStartRef.current.startTop + dy
+      });
+    };
+
+    const handleDragEnd = () => {
+      setIsDragging(false);
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener('mousemove', handleDragMove);
+    window.addEventListener('mouseup', handleDragEnd);
+    return () => {
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+    };
+  }, [isDragging]);
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    if (!coords) return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.pageX,
+      y: e.pageY,
+      startLeft: coords.left,
+      startTop: coords.top
+    };
+    e.stopPropagation(); // Prevent the click from dismissing the popover
+  };
 
   if (!isVisible || !position) return null;
 
@@ -58,7 +95,7 @@ export const TacticalPopover: React.FC<Props> = ({
       aria-live="polite"
       aria-busy={isStreaming}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         left: coords?.left ?? position.x,
         top: coords?.top ?? position.y,
         opacity: coords ? 1 : 0,
@@ -66,7 +103,10 @@ export const TacticalPopover: React.FC<Props> = ({
       }}
     >
       <div className="popover-content">
-        <header>
+        <header 
+          style={{ cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}
+          onMouseDown={handleDragStart}
+        >
           <span className="text-caption">
             {error ? 'Synthesis Error' : isStreaming ? 'Glimpse Synthesis...' : 'Glimpse Explanation'}
           </span>

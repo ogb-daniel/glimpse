@@ -105,9 +105,12 @@ const ContentApp: React.FC = () => {
     };
   }, [getInteractionByTerm]);
 
+  const hasTriggeredRef = React.useRef(false);
+
   React.useEffect(() => {
     const fetchAndStart = async () => {
-      if (isTriggered) {
+      if (isTriggered && !hasTriggeredRef.current) {
+        hasTriggeredRef.current = true;
         let text = '';
         if (isPdfDocument()) {
           // Attempt native bridge first
@@ -129,7 +132,8 @@ const ContentApp: React.FC = () => {
           // If we triggered but somehow got no text, dismiss
           dismiss();
         }
-      } else {
+      } else if (!isTriggered) {
+        hasTriggeredRef.current = false;
         setCapturedTerm('');
         resetStream();
       }
@@ -189,8 +193,12 @@ export default defineContentScript({
       append: 'last',
       onMount: (container: HTMLElement) => {
         const wrapper = document.createElement('div');
-        // The popover attribute ensures it appears on the top layer
-        wrapper.setAttribute('popover', 'manual');
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '0';
+        wrapper.style.left = '0';
+        wrapper.style.width = '100%';
+        wrapper.style.height = '100%';
+        wrapper.style.zIndex = '2147483647';
         // Finding 8: Ensure wrapper doesn't block interactions on host page
         wrapper.style.pointerEvents = 'none';
         wrapper.style.background = 'transparent';
@@ -202,10 +210,6 @@ export default defineContentScript({
         
         const root = ReactDOM.createRoot(wrapper);
         root.render(<ContentApp />);
-        
-        // Show the popover immediately so it's ready to display top-layer content
-        // @ts-ignore - Popover API might not be in the types yet
-        if (wrapper.showPopover) wrapper.showPopover();
         
         return { root, wrapper };
       },

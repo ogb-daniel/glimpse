@@ -10,7 +10,7 @@ export const MagicHoldAnimation: React.FC<Props> = ({ position }) => {
   return (
     <div
       style={{
-        position: 'fixed',
+        position: 'absolute',
         left: position.x,
         top: position.y,
         width: 0,
