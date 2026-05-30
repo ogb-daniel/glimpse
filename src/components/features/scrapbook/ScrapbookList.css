@@ -1,0 +1,16 @@
+.scrapbook-list {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-4);
+}
+
+.loading, .empty-state {
+  text-align: center;
+  padding: var(--spacing-6);
+  color: var(--ink-secondary);
+}
+
+.empty-state {
+  font-style: italic;
+  line-height: 1.6;
+}
