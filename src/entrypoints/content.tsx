@@ -24,6 +24,7 @@ const ContentApp: React.FC = () => {
     position: { x: number; y: number };
   } | null>(null);
   const hoverTimer = React.useRef<any>(null);
+  const latestHoverTerm = React.useRef<string | null>(null);
 
   // Initialize Underliner
   useCodexUnderliner();
@@ -57,11 +58,12 @@ const ContentApp: React.FC = () => {
         const term = target.dataset.term;
         if (!term) return;
 
+        latestHoverTerm.current = term;
         if (hoverTimer.current) clearTimeout(hoverTimer.current);
         
         hoverTimer.current = setTimeout(async () => {
           const result = await getInteractionByTerm(term);
-          if (result.success && result.data) {
+          if (latestHoverTerm.current === term && result.success && result.data) {
             const rect = target.getBoundingClientRect();
             setTooltipData({
               term: result.data.term,
@@ -77,6 +79,7 @@ const ContentApp: React.FC = () => {
     };
 
     const clearTooltip = () => {
+      latestHoverTerm.current = null;
       if (hoverTimer.current) {
         clearTimeout(hoverTimer.current);
         hoverTimer.current = null;

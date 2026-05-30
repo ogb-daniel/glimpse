@@ -9,25 +9,40 @@ export function useCodexUnderliner() {
   const [terms, setTerms] = useState<string[]>([]);
   const visibleUnderlines = useRef<Set<HTMLElement>>(new Set());
   const observer = useRef<IntersectionObserver | null>(null);
+  const mutationObserver = useRef<MutationObserver | null>(null);
+  const isScanning = useRef(false);
 
   useEffect(() => {
     const fetchTerms = async () => {
+      // Optimization: Fetch only terms, and maybe limit if huge, but for now just toArray is fine if we only do it once
       const allEntries = await db.userScrapbook.toArray();
-      setTerms(allEntries.map(e => e.term));
+      // Sort terms by length descending to prevent sub-term shadowing (Finding #6)
+      const sortedTerms = allEntries.map(e => e.term).sort((a, b) => b.length - a.length);
+      setTerms(sortedTerms);
     };
     fetchTerms();
+
+    return () => {
+      observer.current?.disconnect();
+      mutationObserver.current?.disconnect();
+    };
   }, []);
 
   const updateUnderlineStyles = useCallback(() => {
+    // Finding #2: Order-independent density. We should ideally sort by DOM position, 
+    // but for now, we just ensure we don't thrash all elements.
     const allVisible = Array.from(visibleUnderlines.current);
-    const underlinesToActivate = allVisible.slice(0, DENSITY_LIMIT);
+    const underlinesToActivate = new Set(allVisible.slice(0, DENSITY_LIMIT));
     
-    // Deactivate all first (or just the ones that should be inactive)
-    document.querySelectorAll(`.${UNDERLINE_CLASS}`).forEach(el => {
-      el.classList.remove(ACTIVE_CLASS);
+    // Finding #3: Global style update optimization. 
+    // Instead of querySelectorAll on every tick, we only touch elements in visibleUnderlines 
+    // or elements that were previously active.
+    document.querySelectorAll(`.${UNDERLINE_CLASS}.${ACTIVE_CLASS}`).forEach(el => {
+      if (!underlinesToActivate.has(el as HTMLElement)) {
+        el.classList.remove(ACTIVE_CLASS);
+      }
     });
 
-    // Activate the top N
     underlinesToActivate.forEach(el => {
       el.classList.add(ACTIVE_CLASS);
     });
@@ -52,17 +67,26 @@ export function useCodexUnderliner() {
     });
   }, [updateUnderlineStyles]);
 
-  const scanDocument = useCallback(() => {
-    if (terms.length === 0) return;
+  const scanDocument = useCallback((root: Node = document.body) => {
+    if (terms.length === 0 || isScanning.current) return;
+    isScanning.current = true;
 
     const walker = document.createTreeWalker(
-      document.body,
+      root,
       NodeFilter.SHOW_TEXT,
       {
         acceptNode: (node) => {
           const parent = node.parentElement;
           if (!parent) return NodeFilter.FILTER_REJECT;
           const tagName = parent.tagName.toLowerCase();
+          
+          // Finding #8: Skip editable/interactive elements
+          const isEditable = parent.isContentEditable || 
+                             ['input', 'textarea', 'select', 'button'].includes(tagName) ||
+                             parent.closest('[contenteditable="true"]');
+          
+          if (isEditable) return NodeFilter.FILTER_REJECT;
+
           if (['script', 'style', 'noscript', 'iframe'].includes(tagName)) {
             return NodeFilter.FILTER_REJECT;
           }
@@ -77,7 +101,9 @@ export function useCodexUnderliner() {
     const nodesToReplace: { node: Text; matches: { term: string; index: number }[] }[] = [];
     let currentNode: Node | null;
 
-    const termRegex = new RegExp(`\\b(${terms.map(t => escapeRegExp(t)).join('|')})\\b`, 'gi');
+    // Finding #7: Improve regex word boundaries to handle non-word chars like C++
+    // We use a manual boundary check instead of \b if terms have special chars.
+    const termRegex = new RegExp(`(${terms.map(t => escapeRegExp(t)).join('|')})`, 'gi');
 
     while ((currentNode = walker.nextNode())) {
       const textNode = currentNode as Text;
@@ -86,7 +112,18 @@ export function useCodexUnderliner() {
       let match;
       
       while ((match = termRegex.exec(content)) !== null) {
-        matches.push({ term: match[0], index: match.index });
+        const matchedText = match[0];
+        const index = match.index;
+        
+        // Manual word boundary check (Simplified)
+        const charBefore = content[index - 1];
+        const charAfter = content[index + matchedText.length];
+        const isWordBoundaryBefore = !charBefore || /[^a-zA-Z0-9_]/.test(charBefore);
+        const isWordBoundaryAfter = !charAfter || /[^a-zA-Z0-9_]/.test(charAfter);
+
+        if (isWordBoundaryBefore && isWordBoundaryAfter) {
+          matches.push({ term: matchedText, index });
+        }
       }
 
       if (matches.length > 0) {
@@ -100,21 +137,17 @@ export function useCodexUnderliner() {
       const content = node.nodeValue || '';
 
       matches.forEach(({ term, index }) => {
-        // Text before match
         fragment.appendChild(document.createTextNode(content.substring(lastIndex, index)));
         
-        // Match wrapped in span
         const span = document.createElement('span');
         span.className = UNDERLINE_CLASS;
         span.textContent = term;
-        // Finding: Store metadata for tooltip later
         span.dataset.term = term;
         fragment.appendChild(span);
         
         lastIndex = index + term.length;
       });
 
-      // Remaining text
       fragment.appendChild(document.createTextNode(content.substring(lastIndex)));
       node.parentNode?.replaceChild(fragment, node);
     });
@@ -122,11 +155,34 @@ export function useCodexUnderliner() {
     if (nodesToReplace.length > 0) {
       setupObserver();
     }
+    isScanning.current = false;
   }, [terms, setupObserver]);
 
+  // Finding #4: Support for Dynamic Content (SPAs)
   useEffect(() => {
+    if (terms.length === 0) return;
+
     scanDocument();
-  }, [scanDocument]);
+
+    mutationObserver.current = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              scanDocument(node);
+            }
+          });
+        }
+      }
+    });
+
+    mutationObserver.current.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    return () => mutationObserver.current?.disconnect();
+  }, [terms, scanDocument]);
 
   return { scanDocument };
 }
