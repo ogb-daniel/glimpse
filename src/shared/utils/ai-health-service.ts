@@ -4,45 +4,46 @@
  * Service to check Chrome's built-in AI (Gemini Nano) capabilities.
  */
 
-export type AiCapabilityStatus = 'readily' | 'after-download' | 'no';
+export type AiCapabilityStatus = "available" | "downloadable" | "downloading" | "unavailable";
 
 export interface AiCapabilities {
   available: AiCapabilityStatus;
 }
 
-export type AiHealthResult = 
+export type AiHealthResult =
   | { success: true; data: AiCapabilities }
   | { success: false; error: string; code: string };
 
 /**
- * Checks if the Prompt API (self.ai.languageModel) is available and its status.
+ * Checks if the Prompt API (LanguageModel) is available and its status.
  * Follows the Result/Either pattern for consistency with other services.
  */
 export async function checkAiCapabilities(): Promise<AiHealthResult> {
   try {
-    // Check if the AI namespace and languageModel are available using the correct self.ai namespace
-    const ai = (self as any).ai;
-    if (typeof ai === 'undefined' || !ai.languageModel) {
-      return { 
-        success: false, 
-        error: "Built-in AI (Prompt API) is not supported in this environment.", 
-        code: "UNSUPPORTED" 
+    // Check if the LanguageModel global is available
+    if (typeof LanguageModel === "undefined") {
+      return {
+        success: false,
+        error: "Built-in AI (Prompt API) is not supported in this environment.",
+        code: "UNSUPPORTED",
       };
     }
 
-    const capabilities = await ai.languageModel.capabilities();
+    const availability = await LanguageModel.availability();
+    console.log(availability);
+
     return {
       success: true,
       data: {
-        available: capabilities.available as AiCapabilityStatus,
-      }
+        available: availability as AiCapabilityStatus,
+      },
     };
   } catch (error) {
-    console.error('Glimpse: Error checking AI capabilities:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error", 
-      code: "CHECK_FAILED" 
+    console.error("Glimpse: Error checking AI capabilities:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      code: "CHECK_FAILED",
     };
   }
 }
