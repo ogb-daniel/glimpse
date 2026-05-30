@@ -13,13 +13,13 @@ function App() {
         // Try session storage first
         const sessionData = await (browser.storage as any).session.get('bloom_context');
         if (sessionData && sessionData.bloom_context) {
-          setBloomContext(sessionData.bloom_context);
+          setBloomContext(sessionData.bloom_context as BloomContext);
           await (browser.storage as any).session.remove('bloom_context');
         } else {
           // Fallback to local
           const localData = await browser.storage.local.get('bloom_context');
-          if (localData && localData.bloom_context) {
-            setBloomContext(localData.bloom_context);
+          if (localData && (localData as any).bloom_context) {
+            setBloomContext((localData as any).bloom_context as BloomContext);
             await browser.storage.local.remove('bloom_context');
           }
         }
