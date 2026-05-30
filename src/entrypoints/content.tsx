@@ -91,6 +91,7 @@ const ContentApp: React.FC = () => {
 export default defineContentScript({
   matches: ['<all_urls>'],
   cssInjectionMode: 'ui',
+  allFrames: true,
 
   async main(ctx) {
     const ui = await createShadowRootUi(ctx, {
