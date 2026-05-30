@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { AppMessage } from '../shared/types/messaging';
+import { AppMessage, PageMetadata } from '../shared/types/messaging';
 import { extractPageMetadata } from '../shared/utils/metadata-utils';
 import { useScrapbook } from './use-scrapbook';
 
@@ -18,13 +18,11 @@ export function useAiStream() {
     setIsStreaming(false);
   }, []);
 
-  // Finding 2: Cleanup port on unmount
   useEffect(() => {
     return () => cleanup();
   }, [cleanup]);
 
   const startStream = useCallback((contextText: string) => {
-    // Finding 8: Prevent concurrent connections
     if (isStreaming) return;
 
     setStreamingText('');
@@ -44,7 +42,6 @@ export function useAiStream() {
 
     const listener = (msg: AppMessage) => {
       if (msg.type === 'AI_STREAM_CHUNK') {
-        // Finding 10: Prevent flickering if chunks arrive out of order (though rare on ports)
         setStreamingText(prev => msg.payload.token.length > prev.length ? msg.payload.token : prev);
       } else if (msg.type === 'AI_STREAM_COMPLETE') {
         const url = metadata?.url || '';
@@ -77,6 +74,48 @@ export function useAiStream() {
     });
   }, [isStreaming, cleanup, saveInteraction]);
 
+  const continueStream = useCallback((
+    prompt: string, 
+    history: { role: 'user' | 'assistant'; content: string }[],
+    metadata?: PageMetadata
+  ) => {
+    if (isStreaming) return;
+
+    setStreamingText('');
+    setIsStreaming(true);
+    setError(null);
+
+    const port = browser.runtime.connect({ name: 'ai-bridge' });
+    portRef.current = port;
+    
+    // Fallback to local extraction if not provided (works in Content Script)
+    const finalMetadata = metadata || extractPageMetadata();
+
+    const message: AppMessage = {
+      type: 'CONTINUE_AI_STREAM',
+      payload: { prompt, history, metadata: finalMetadata }
+    };
+
+    port.postMessage(message);
+
+    const listener = (msg: AppMessage) => {
+      if (msg.type === 'AI_STREAM_CHUNK') {
+        setStreamingText(prev => msg.payload.token.length > prev.length ? msg.payload.token : prev);
+      } else if (msg.type === 'AI_STREAM_COMPLETE') {
+        cleanup();
+      } else if (msg.type === 'AI_STREAM_ERROR') {
+        setError({ message: msg.payload.error, code: msg.payload.code });
+        cleanup();
+      }
+    };
+
+    port.onMessage.addListener(listener);
+    port.onDisconnect.addListener(() => {
+      setIsStreaming(false);
+      portRef.current = null;
+    });
+  }, [isStreaming, cleanup]);
+
   const resetStream = useCallback(() => {
     setStreamingText('');
     setIsStreaming(false);
@@ -88,6 +127,7 @@ export function useAiStream() {
     isStreaming,
     error,
     startStream,
+    continueStream,
     resetStream,
   };
 }
