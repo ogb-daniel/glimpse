@@ -56,6 +56,7 @@ export const TacticalPopover: React.FC<Props> = ({
       className="tactical-popover"
       role="status"
       aria-live="polite"
+      aria-busy={isStreaming}
       style={{
         position: 'fixed',
         left: coords?.left ?? position.x,
@@ -74,7 +75,12 @@ export const TacticalPopover: React.FC<Props> = ({
           {error ? (
             <p className="text-error" style={{ color: 'var(--color-error, #ff4d4f)' }}>{error.message}</p>
           ) : (
-            <p className="text-serif">{streamingText || (isStreaming ? 'Synthesizing...' : '')}</p>
+            <div className="streaming-container" style={{ minHeight: '1.5em' }}>
+              {isStreaming && !streamingText && (
+                <span className="sr-only">Glimpse synthesis in progress.</span>
+              )}
+              <p className="text-serif">{streamingText || (isStreaming ? 'Synthesizing...' : '')}</p>
+            </div>
           )}
         </main>
         {!error && !isStreaming && streamingText && (
