@@ -93,7 +93,6 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Tactical Popover */
 .tactical-popover {
-  z-index: 2147483647; /* Fallback for when not on top layer, but ideally redundant */
   max-width: 340px;
   min-width: 200px;
 }

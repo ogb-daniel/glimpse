@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export function useMagicHold() {
   const [isHolding, setIsHolding] = useState(false);
@@ -6,11 +6,15 @@ export function useMagicHold() {
   const [position, setPosition] = useState<{ x: number, y: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const dismiss = useCallback(() => {
+    setIsTriggered(false);
+    setPosition(null);
+  }, []);
+
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       // Finding 3: Reset triggered state on any new click
-      setIsTriggered(false);
-      setPosition(null);
+      dismiss();
 
       // Finding 7: Check for modifier keys
       if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
@@ -114,15 +118,12 @@ export function useMagicHold() {
 
     document.addEventListener('selectionchange', handleSelectionChange);
     return () => document.removeEventListener('selectionchange', handleSelectionChange);
-  }, []);
+  }, [dismiss]);
 
   return {
     isHolding,
     isTriggered,
     position,
-    dismiss: () => {
-      setIsTriggered(false);
-      setPosition(null);
-    },
+    dismiss,
   };
 }

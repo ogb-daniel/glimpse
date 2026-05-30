@@ -3,3 +3,4 @@ _bmad
 _bmad-output
 node_modules
 .wxt
+.output/

@@ -9,6 +9,8 @@ const ContentApp: React.FC = () => {
   const { isHolding, isTriggered, position, dismiss } = useMagicHold();
 
   React.useEffect(() => {
+    if (!isTriggered) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         dismiss();
@@ -16,7 +18,7 @@ const ContentApp: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [dismiss]);
+  }, [isTriggered, dismiss]);
 
   return (
     <>
