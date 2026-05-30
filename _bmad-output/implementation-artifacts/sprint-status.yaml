@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-30T10:00:00.000Z
-last_updated: 2026-05-30T16:00:00Z
+last_updated: 2026-05-30T17:00:00Z
 project: plain
 project_key: NOKEY
 tracking_system: file-system
@@ -56,7 +56,7 @@ development_status:
   epic-2-retrospective: optional
   epic-3: in-progress
   3-1-dexie-js-schema-auto-save: done
-  3-2-side-panel-scrapbook-dashboard: backlog
+  3-2-side-panel-scrapbook-dashboard: in-progress
   3-3-codex-underlining-implementation: backlog
   3-4-bloom-transition-popover-to-side-panel: backlog
   epic-3-retrospective: optional
