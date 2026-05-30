@@ -33,7 +33,20 @@ export function useScrapbook() {
     }
   }, []);
 
+  const deleteInteraction = useCallback(async (id: number): Promise<DbResult<void>> => {
+    try {
+      await db.userScrapbook.delete(id);
+      return { success: true, data: undefined };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown database error'
+      };
+    }
+  }, []);
+
   return {
-    saveInteraction
+    saveInteraction,
+    deleteInteraction
   };
 }
