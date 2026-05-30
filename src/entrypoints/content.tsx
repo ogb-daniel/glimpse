@@ -8,6 +8,8 @@ import { MagicHoldAnimation } from '@/components/overlays/MagicHoldAnimation';
 import { TacticalPopover } from '@/components/overlays/TacticalPopover';
 import { CodexTooltip } from '@/components/overlays/CodexTooltip';
 import { isPdfDocument, getNativePdfSelection, getPdfFallbackText } from '@/shared/utils/pdf-utils';
+import { BloomContext } from '@/shared/types/messaging';
+import { extractPageMetadata } from '@/shared/utils/metadata-utils';
 import '@/assets/main.css';
 
 const ContentApp: React.FC = () => {
@@ -31,20 +33,19 @@ const ContentApp: React.FC = () => {
 
   const handleDeepChat = async () => {
     if (capturedTerm && streamingText) {
-      // Finding 1: Key by tabId to avoid multi-tab race conditions
-      // Finding 2: Use message to background to get current tabId
-      const tabId = await browser.runtime.sendMessage({ type: 'GET_TAB_ID' });
-      const storageKey = `active_research_context_${tabId}`;
+      const bloomContext: BloomContext = {
+        term: capturedTerm,
+        explanation: streamingText,
+        metadata: extractPageMetadata(),
+        timestamp: Date.now()
+      };
       
-      await browser.storage.local.set({
-        [storageKey]: {
-          term: capturedTerm,
-          explanation: streamingText,
-          url: window.location.href,
-          title: document.title,
-          timestamp: Date.now()
-        }
-      });
+      try {
+        await (browser.storage as any).session.set({ bloom_context: bloomContext });
+      } catch (e) {
+        console.warn('Glimpse: session storage not available, falling back to local', e);
+        await browser.storage.local.set({ bloom_context: bloomContext });
+      }
     }
 
     browser.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
