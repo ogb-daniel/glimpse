@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { AppMessage } from '../shared/types/messaging';
 import { extractPageMetadata } from '../shared/utils/metadata-utils';
 
@@ -6,13 +6,31 @@ export function useAiStream() {
   const [streamingText, setStreamingText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<{ message: string; code?: string } | null>(null);
+  const portRef = useRef<ReturnType<typeof browser.runtime.connect> | null>(null);
+
+  const cleanup = useCallback(() => {
+    if (portRef.current) {
+      portRef.current.disconnect();
+      portRef.current = null;
+    }
+    setIsStreaming(false);
+  }, []);
+
+  // Finding 2: Cleanup port on unmount
+  useEffect(() => {
+    return () => cleanup();
+  }, [cleanup]);
 
   const startStream = useCallback((contextText: string) => {
+    // Finding 8: Prevent concurrent connections
+    if (isStreaming) return;
+
     setStreamingText('');
     setIsStreaming(true);
     setError(null);
 
     const port = browser.runtime.connect({ name: 'ai-bridge' });
+    portRef.current = port;
     const metadata = extractPageMetadata();
 
     const message: AppMessage = {
@@ -24,23 +42,22 @@ export function useAiStream() {
 
     const listener = (msg: AppMessage) => {
       if (msg.type === 'AI_STREAM_CHUNK') {
-        setStreamingText(msg.payload.token);
+        // Finding 10: Prevent flickering if chunks arrive out of order (though rare on ports)
+        setStreamingText(prev => msg.payload.token.length > prev.length ? msg.payload.token : prev);
       } else if (msg.type === 'AI_STREAM_COMPLETE') {
-        setIsStreaming(false);
-        port.onMessage.removeListener(listener);
-        port.disconnect();
+        cleanup();
       } else if (msg.type === 'AI_STREAM_ERROR') {
         setError({ message: msg.payload.error, code: msg.payload.code });
-        setIsStreaming(false);
-        port.onMessage.removeListener(listener);
-        port.disconnect();
+        cleanup();
       }
     };
 
     port.onMessage.addListener(listener);
-
-    // Return a cleanup function if needed, though this is manually triggered
-  }, []);
+    port.onDisconnect.addListener(() => {
+      setIsStreaming(false);
+      portRef.current = null;
+    });
+  }, [isStreaming, cleanup]);
 
   const resetStream = useCallback(() => {
     setStreamingText('');

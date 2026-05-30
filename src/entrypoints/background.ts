@@ -53,16 +53,27 @@ export default defineBackground(() => {
           let fullText = '';
           for await (const chunk of stream) {
             fullText = chunk; // In Nano streaming, each chunk is the cumulative text so far
-            port.postMessage({ type: 'AI_STREAM_CHUNK', payload: { token: chunk } });
+            port.postMessage({ 
+              type: 'AI_STREAM_CHUNK', 
+              payload: { token: chunk, isComplete: false } 
+            });
           }
 
           port.postMessage({ type: 'AI_STREAM_COMPLETE', payload: { fullText } });
-          session.destroy();
+          
+          // Finding 6: Ensure session destruction doesn't race with final message delivery
+          setTimeout(() => session.destroy(), 0);
         } catch (error: any) {
           console.error('Glimpse: AI Bridge Error:', error);
+          
+          // Finding 5: Map specific error conditions per AC 6
+          let code = 'STREAM_ERROR';
+          if (error.message?.includes('VRAM')) code = 'VRAM_LOW';
+          if (error.message?.includes('rejected') || error.message?.includes('policy')) code = 'PROMPT_REJECTED';
+          
           port.postMessage({ 
             type: 'AI_STREAM_ERROR', 
-            payload: { error: error.message || 'An unknown error occurred during synthesis.', code: 'STREAM_ERROR' } 
+            payload: { success: false, error: error.message || 'An unknown error occurred during synthesis.', code } 
           });
         }
       }

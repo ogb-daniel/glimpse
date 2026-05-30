@@ -5,13 +5,20 @@ import { PageMetadata } from "../types/messaging";
  * Designed to be run in a Content Script.
  */
 export function extractPageMetadata(): PageMetadata {
-  const url = window.location.href;
-  const title = document.title;
-  const h1 = document.querySelector('h1')?.textContent?.trim() || undefined;
+  const url = typeof window !== 'undefined' ? window.location.href : '';
+  const title = typeof document !== 'undefined' ? document.title : '';
+  
+  const h1s: string[] = [];
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('h1').forEach(el => {
+      const text = el.textContent?.trim();
+      if (text) h1s.push(text);
+    });
+  }
 
   return {
     url,
     title,
-    h1,
+    h1s: h1s.length > 0 ? h1s : undefined,
   };
 }

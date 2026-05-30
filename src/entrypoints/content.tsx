@@ -14,7 +14,8 @@ const ContentApp: React.FC = () => {
     if (isTriggered) {
       const selection = window.getSelection();
       const text = selection?.toString().trim();
-      if (text) {
+      // Finding 7: Ensure selection is not empty before starting stream
+      if (text && text.length > 0) {
         startStream(text);
       }
     } else {
