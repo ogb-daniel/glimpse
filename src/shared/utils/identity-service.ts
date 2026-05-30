@@ -13,7 +13,7 @@ function bufferToBase64(buffer: ArrayBuffer): string {
 /**
  * Converts a Base64 string to an ArrayBuffer.
  */
-function base64ToBuffer(base64: string): ArrayBuffer {
+export function base64ToBuffer(base64: string): ArrayBuffer {
   const binaryString = atob(base64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -49,7 +49,7 @@ export async function generateIdentity(): Promise<IdentityResult> {
       createdAt: new Date().toISOString(),
     };
 
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       [STORAGE_KEY_KEYS]: keys,
       [STORAGE_KEY_IDENTITY]: identity,
     });
@@ -70,7 +70,7 @@ export async function generateIdentity(): Promise<IdentityResult> {
  */
 export async function getOrCreateIdentity(): Promise<IdentityResult> {
   try {
-    const stored = await chrome.storage.local.get([STORAGE_KEY_IDENTITY]);
+    const stored = await browser.storage.local.get([STORAGE_KEY_IDENTITY]);
     
     if (stored[STORAGE_KEY_IDENTITY]) {
       return { success: true, data: stored[STORAGE_KEY_IDENTITY] as Identity };
