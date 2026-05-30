@@ -115,4 +115,26 @@ describe('useScrapbook', () => {
       db.userScrapbook.delete = originalDelete;
     }
   });
+
+  it('should get interaction by term successfully', async () => {
+    await db.open();
+    await db.userScrapbook.add({
+      term: 'Test Term',
+      explanation: 'Explanation',
+      domainUrl: 'example.com',
+      learnedAt: Date.now(),
+    });
+
+    const { result } = renderHook(() => useScrapbook());
+    
+    let response: DbResult<UserScrapbook | undefined> | undefined;
+    await act(async () => {
+      response = await result.current.getInteractionByTerm('test term'); // Case insensitive
+    });
+
+    expect(response?.success).toBe(true);
+    if (response?.success) {
+      expect(response.data?.term).toBe('Test Term');
+    }
+  });
 });
