@@ -33,6 +33,15 @@ so that user research is never lost and is easily queryable for UI features.
   - [x] Add `src/shared/db/dexie-db.test.ts` to verify schema and CRUD operations
   - [x] Add `src/hooks/use-scrapbook.test.ts` to verify the auto-save integration logic
 
+### Review Follow-ups (AI)
+
+- [x] [Review][Patch] Move `fake-indexeddb` from `dependencies` to `devDependencies` [package.json]
+- [x] [Review][Patch] Fix Result Pattern error handling in `use-ai-stream.ts`; handle `success: false` properly instead of using `.catch()` [src/hooks/use-ai-stream.ts:51]
+- [x] [Review][Patch] Add guards against saving interactions with empty `contextText`, empty `fullText`, or missing `metadata.url` [src/hooks/use-ai-stream.ts:48]
+- [x] [Review][Patch] Remove unnecessary type cast `entry as UserScrapbook` [src/hooks/use-scrapbook.ts:18]
+- [x] [Review][Defer] Improve database testing strategy (remove monkey-patching and hardcoded imports) [src/hooks/use-scrapbook.test.ts] — deferred, pre-existing
+- [x] [Review][Defer] Strict Domain Modeling (separate DTO without `id` vs Entity with `id`) [src/shared/types/models.ts] — deferred, pre-existing
+
 ## Dev Notes
 
 - **IndexedDB (Dexie.js):** Version 4.4.3 is mandated by architecture.

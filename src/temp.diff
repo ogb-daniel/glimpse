@@ -1,0 +1,273 @@
+diff --git a/package.json b/package.json
+index 661094a..36d512f 100644
+--- a/package.json
++++ b/package.json
+@@ -12,6 +12,7 @@
+     "postinstall": "wxt prepare"
+   },
+   "dependencies": {
++    "dexie": "^4.4.3",
+     "pdfjs-dist": "^5.6.205",
+     "react": "^18.3.1",
+     "react-dom": "^18.3.1"
+@@ -24,6 +25,7 @@
+     "@types/react": "^18.3.3",
+     "@types/react-dom": "^18.3.0",
+     "@wxt-dev/module-react": "^1.2.2",
++    "fake-indexeddb": "^6.2.5",
+     "jsdom": "^29.1.1",
+     "typescript": "^5.4.5",
+     "vitest": "^4.1.7",
+diff --git a/src/hooks/use-ai-stream.ts b/src/hooks/use-ai-stream.ts
+index 7b28055..52ec41c 100644
+--- a/src/hooks/use-ai-stream.ts
++++ b/src/hooks/use-ai-stream.ts
+@@ -1,12 +1,14 @@
+ import { useState, useCallback, useRef, useEffect } from 'react';
+ import { AppMessage } from '../shared/types/messaging';
+ import { extractPageMetadata } from '../shared/utils/metadata-utils';
++import { useScrapbook } from './use-scrapbook';
+ 
+ export function useAiStream() {
+   const [streamingText, setStreamingText] = useState('');
+   const [isStreaming, setIsStreaming] = useState(false);
+   const [error, setError] = useState<{ message: string; code?: string } | null>(null);
+   const portRef = useRef<ReturnType<typeof browser.runtime.connect> | null>(null);
++  const { saveInteraction } = useScrapbook();
+ 
+   const cleanup = useCallback(() => {
+     if (portRef.current) {
+@@ -45,6 +47,11 @@ export function useAiStream() {
+         // Finding 10: Prevent flickering if chunks arrive out of order (though rare on ports)
+         setStreamingText(prev => msg.payload.token.length > prev.length ? msg.payload.token : prev);
+       } else if (msg.type === 'AI_STREAM_COMPLETE') {
++        saveInteraction({
++          term: contextText,
++          explanation: msg.payload.fullText,
++          domainUrl: metadata.url
++        }).catch(err => console.error('Failed to auto-save interaction:', err));
+         cleanup();
+       } else if (msg.type === 'AI_STREAM_ERROR') {
+         setError({ message: msg.payload.error, code: msg.payload.code });
+@@ -57,7 +64,7 @@ export function useAiStream() {
+       setIsStreaming(false);
+       portRef.current = null;
+     });
+-  }, [isStreaming, cleanup]);
++  }, [isStreaming, cleanup, saveInteraction]);
+ 
+   const resetStream = useCallback(() => {
+     setStreamingText('');
+diff --git a/src/hooks/use-scrapbook.test.ts b/src/hooks/use-scrapbook.test.ts
+new file mode 100644
+index 0000000..cd1e2aa
+--- /dev/null
++++ b/src/hooks/use-scrapbook.test.ts
+@@ -0,0 +1,70 @@
++/** @vitest-environment jsdom */
++import 'fake-indexeddb/auto';
++import { renderHook, act } from '@testing-library/react';
++import { describe, it, expect, beforeEach, afterEach } from 'vitest';
++import { useScrapbook, type DbResult } from './use-scrapbook';
++import { db } from '../shared/db/dexie-db';
++import { UserScrapbook } from '../shared/types/models';
++
++describe('useScrapbook', () => {
++  beforeEach(async () => {
++    if (db.isOpen()) {
++      await db.close();
++    }
++  });
++
++  afterEach(async () => {
++    await db.delete();
++  });
++
++  it('should save interaction successfully', async () => {
++    await db.open();
++    const { result } = renderHook(() => useScrapbook());
++    
++    let response: DbResult<UserScrapbook> | undefined;
++    await act(async () => {
++      response = await result.current.saveInteraction({
++        term: 'Test Term',
++        explanation: 'Explanation',
++        domainUrl: 'example.com',
++      });
++    });
++
++    expect(response?.success).toBe(true);
++    if (response?.success) {
++      expect(response.data.id).toBeDefined();
++    }
++
++    const saved = await db.userScrapbook.toArray();
++    expect(saved).toHaveLength(1);
++    expect(saved[0].term).toBe('Test Term');
++    expect(saved[0].learnedAt).toBeDefined();
++  });
++
++  it('should return error if save fails', async () => {
++    // Database isn't open, Dexie might auto-open it. 
++    // To simulate a failure, we can temporarily monkey-patch db.userScrapbook.add
++    await db.open();
++    const originalAdd = db.userScrapbook.add;
++    db.userScrapbook.add = () => Promise.reject(new Error('Simulated failure')) as any;
++    
++    const { result } = renderHook(() => useScrapbook());
++
++    let response: DbResult<UserScrapbook> | undefined;
++    await act(async () => {
++      response = await result.current.saveInteraction({
++        term: 'Test Term',
++        explanation: 'Explanation',
++        domainUrl: 'example.com',
++      });
++    });
++
++    expect(response?.success).toBe(false);
++    if (response?.success === false) {
++      expect(response.error).toBeDefined();
++    }
++    
++    // Restore
++    db.userScrapbook.add = originalAdd;
++  });
++});
+diff --git a/src/hooks/use-scrapbook.ts b/src/hooks/use-scrapbook.ts
+new file mode 100644
+index 0000000..69073c4
+--- /dev/null
++++ b/src/hooks/use-scrapbook.ts
+@@ -0,0 +1,39 @@
++import { useCallback } from 'react';
++import { db } from '../shared/db/dexie-db';
++import { UserScrapbook } from '../shared/types/models';
++
++export type DbResult<T> = 
++  | { success: true; data: T }
++  | { success: false; error: string };
++
++export function useScrapbook() {
++  const saveInteraction = useCallback(async (
++    interaction: Omit<UserScrapbook, 'id' | 'learnedAt'>
++  ): Promise<DbResult<UserScrapbook>> => {
++    try {
++      const entry: Omit<UserScrapbook, 'id'> = {
++        ...interaction,
++        learnedAt: Date.now()
++      };
++      
++      const id = await db.userScrapbook.add(entry as UserScrapbook);
++      
++      return {
++        success: true,
++        data: {
++          ...entry,
++          id
++        }
++      };
++    } catch (error) {
++      return {
++        success: false,
++        error: error instanceof Error ? error.message : 'Unknown database error'
++      };
++    }
++  }, []);
++
++  return {
++    saveInteraction
++  };
++}
+diff --git a/src/shared/db/dexie-db.test.ts b/src/shared/db/dexie-db.test.ts
+new file mode 100644
+index 0000000..1a5b0d8
+--- /dev/null
++++ b/src/shared/db/dexie-db.test.ts
+@@ -0,0 +1,51 @@
++import { describe, it, expect, beforeEach, afterEach } from 'vitest';
++import 'fake-indexeddb/auto';
++import { db } from './dexie-db';
++import { UserScrapbook } from '../types/models';
++
++describe('GlimpseDatabase', () => {
++  beforeEach(async () => {
++    // Make sure we have a fresh DB state
++    if (db.isOpen()) {
++      await db.close();
++    }
++  });
++
++  afterEach(async () => {
++    await db.delete();
++  });
++
++  it('should initialize with the correct schema', async () => {
++    await db.open();
++    const table = db.userScrapbook;
++    
++    expect(table.schema.primKey.name).toBe('id');
++    expect(table.schema.primKey.auto).toBe(true);
++    
++    const indexes = table.schema.indexes.map(idx => idx.name);
++    expect(indexes).toContain('term');
++    expect(indexes).toContain('domainUrl');
++    expect(indexes).toContain('learnedAt');
++    // explanation should not be indexed based on dev notes
++    expect(indexes).not.toContain('explanation');
++  });
++
++  it('should auto-assign ids and save interactions', async () => {
++    await db.open();
++    
++    const entry: Omit<UserScrapbook, 'id'> = {
++      term: 'Test Term',
++      explanation: 'Test Explanation',
++      domainUrl: 'https://example.com',
++      learnedAt: Date.now()
++    };
++    
++    const id = await db.userScrapbook.add(entry as UserScrapbook);
++    expect(id).toBeDefined();
++    expect(typeof id).toBe('number');
++
++    const retrieved = await db.userScrapbook.get(id);
++    expect(retrieved).toMatchObject(entry);
++    expect(retrieved?.id).toBe(id);
++  });
++});
+diff --git a/src/shared/db/dexie-db.ts b/src/shared/db/dexie-db.ts
+new file mode 100644
+index 0000000..0d9df43
+--- /dev/null
++++ b/src/shared/db/dexie-db.ts
+@@ -0,0 +1,16 @@
++import Dexie, { type Table } from 'dexie';
++import { UserScrapbook } from '../types/models';
++
++export class GlimpseDatabase extends Dexie {
++  userScrapbook!: Table<UserScrapbook, number>;
++
++  constructor() {
++    super('glimpseDatabase');
++    
++    this.version(1).stores({
++      userScrapbook: '++id, term, domainUrl, learnedAt'
++    });
++  }
++}
++
++export const db = new GlimpseDatabase();
+diff --git a/src/shared/types/models.ts b/src/shared/types/models.ts
+new file mode 100644
+index 0000000..8ba8791
+--- /dev/null
++++ b/src/shared/types/models.ts
+@@ -0,0 +1,7 @@
++export interface UserScrapbook {
++  id?: number;
++  term: string;
++  explanation: string;
++  domainUrl: string;
++  learnedAt: number;
++}

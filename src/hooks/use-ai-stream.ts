@@ -47,11 +47,22 @@ export function useAiStream() {
         // Finding 10: Prevent flickering if chunks arrive out of order (though rare on ports)
         setStreamingText(prev => msg.payload.token.length > prev.length ? msg.payload.token : prev);
       } else if (msg.type === 'AI_STREAM_COMPLETE') {
+        const url = metadata?.url || '';
+        if (!contextText || !msg.payload.fullText || !url) {
+          console.warn('Skipping auto-save: missing required interaction data');
+          cleanup();
+          return;
+        }
+
         saveInteraction({
           term: contextText,
           explanation: msg.payload.fullText,
-          domainUrl: metadata.url
-        }).catch(err => console.error('Failed to auto-save interaction:', err));
+          domainUrl: url
+        }).then(result => {
+          if (!result.success) {
+            console.error('Failed to auto-save interaction:', result.error);
+          }
+        });
         cleanup();
       } else if (msg.type === 'AI_STREAM_ERROR') {
         setError({ message: msg.payload.error, code: msg.payload.code });

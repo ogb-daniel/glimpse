@@ -11,12 +11,12 @@ export function useScrapbook() {
     interaction: Omit<UserScrapbook, 'id' | 'learnedAt'>
   ): Promise<DbResult<UserScrapbook>> => {
     try {
-      const entry: Omit<UserScrapbook, 'id'> = {
+      const entry = {
         ...interaction,
         learnedAt: Date.now()
       };
       
-      const id = await db.userScrapbook.add(entry as UserScrapbook);
+      const id = await db.userScrapbook.add(entry);
       
       return {
         success: true,
