@@ -48,7 +48,7 @@ export const TacticalPopover: React.FC<Props> = ({
     }
   }, [isVisible, position]);
 
-  if (!position || !isVisible) return null;
+  if (!isVisible || !position) return null;
 
   return (
     <div
@@ -76,7 +76,7 @@ export const TacticalPopover: React.FC<Props> = ({
             <p className="text-error" style={{ color: 'var(--color-error, #ff4d4f)' }}>{error.message}</p>
           ) : (
             <div className="streaming-container" style={{ minHeight: '1.5em' }}>
-              {isStreaming && !streamingText && (
+              {isStreaming && (
                 <span className="sr-only">Glimpse synthesis in progress.</span>
               )}
               <p className="text-serif">{streamingText || (isStreaming ? 'Synthesizing...' : '')}</p>

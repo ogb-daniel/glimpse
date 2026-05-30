@@ -9,6 +9,7 @@ export function useThemeSniffer(containerRef: React.RefObject<HTMLElement>) {
     if (!containerRef.current) return;
 
     const hostStyles = getComputedStyle(document.documentElement);
+    const bodyStyles = getComputedStyle(document.body);
     const container = containerRef.current;
 
     // List of common theme variables to sniff
@@ -20,10 +21,17 @@ export function useThemeSniffer(containerRef: React.RefObject<HTMLElement>) {
       '--background',
       '--foreground',
       '--text-color',
+      '--bg-color',
+      '--theme-color',
     ];
 
     variablesToSniff.forEach(variable => {
-      const value = hostStyles.getPropertyValue(variable).trim();
+      let value = hostStyles.getPropertyValue(variable).trim();
+      // Fallback to body if not found on documentElement
+      if (!value) {
+        value = bodyStyles.getPropertyValue(variable).trim();
+      }
+      
       if (value) {
         container.style.setProperty(variable, value);
       }

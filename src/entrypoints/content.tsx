@@ -9,16 +9,18 @@ import '@/assets/main.css';
 const ContentApp: React.FC = () => {
   const { isHolding, isTriggered, position, dismiss } = useMagicHold();
   const { streamingText, isStreaming, error, startStream, resetStream } = useAiStream();
+  const [capturedTerm, setCapturedTerm] = React.useState<string>('');
 
   const handleDeepChat = async () => {
-    // Save current context to storage so the sidepanel can pick it up
-    const selection = window.getSelection();
-    const term = selection?.toString().trim();
-    
-    if (term && streamingText) {
+    if (capturedTerm && streamingText) {
+      // Finding 1: Key by tabId to avoid multi-tab race conditions
+      // Finding 2: Use message to background to get current tabId
+      const tabId = await browser.runtime.sendMessage({ type: 'GET_TAB_ID' });
+      const storageKey = `active_research_context_${tabId}`;
+      
       await browser.storage.local.set({
-        active_research_context: {
-          term,
+        [storageKey]: {
+          term: capturedTerm,
           explanation: streamingText,
           url: window.location.href,
           title: document.title,
@@ -27,8 +29,6 @@ const ContentApp: React.FC = () => {
       });
     }
 
-    // browser.sidePanel.open is not available in content script directly
-    // We send a message to background to open it
     browser.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
     dismiss();
   };
@@ -36,12 +36,13 @@ const ContentApp: React.FC = () => {
   React.useEffect(() => {
     if (isTriggered) {
       const selection = window.getSelection();
-      const text = selection?.toString().trim();
-      // Finding 7: Ensure selection is not empty before starting stream
-      if (text && text.length > 0) {
+      const text = selection?.toString().trim() || '';
+      if (text.length > 0) {
+        setCapturedTerm(text);
         startStream(text);
       }
     } else {
+      setCapturedTerm('');
       resetStream();
     }
   }, [isTriggered, startStream, resetStream]);
