@@ -40,6 +40,7 @@ describe('useMagicHold', () => {
   it('should start timer and set position on mousedown with selection', () => {
     (window.getSelection as any).mockReturnValue({
       toString: () => 'selected text',
+      rangeCount: 1,
       getRangeAt: () => ({
         getBoundingClientRect: () => ({ left: 0, top: 0, right: 100, bottom: 100 }),
       }),
@@ -63,6 +64,7 @@ describe('useMagicHold', () => {
   it('should trigger after 1500ms of holding', () => {
     (window.getSelection as any).mockReturnValue({
       toString: () => 'selected text',
+      rangeCount: 1,
       getRangeAt: () => ({
         getBoundingClientRect: () => ({ left: 0, top: 0, right: 100, bottom: 100 }),
       }),
@@ -88,12 +90,16 @@ describe('useMagicHold', () => {
   it('should cancel if mouse is released before 1500ms', () => {
     (window.getSelection as any).mockReturnValue({
       toString: () => 'selected text',
+      rangeCount: 1,
+      getRangeAt: () => ({
+        getBoundingClientRect: () => ({ left: 0, top: 0, right: 100, bottom: 100 }),
+      }),
     });
 
     const { result } = renderHook(() => useMagicHold());
 
     act(() => {
-      window.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+      window.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 50, clientY: 50 }));
     });
     expect(result.current.isHolding).toBe(true);
 

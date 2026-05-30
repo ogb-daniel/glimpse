@@ -23,6 +23,8 @@ export default defineContentScript({
         const wrapper = document.createElement('div');
         // The popover attribute ensures it appears on the top layer
         wrapper.setAttribute('popover', 'manual');
+        // Finding 8: Ensure wrapper doesn't block interactions on host page
+        wrapper.style.pointerEvents = 'none';
         wrapper.style.background = 'transparent';
         wrapper.style.border = 'none';
         wrapper.style.padding = '0';

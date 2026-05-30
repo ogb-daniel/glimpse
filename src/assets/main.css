@@ -62,6 +62,14 @@ h1, h2, h3, h4, h5, h6 {
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Inter';
+  src: url('@/assets/fonts/inter-bold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Animations */
 @keyframes pulse-ring {
   0% {
@@ -79,6 +87,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 2px solid var(--glow-ring);
   border-radius: 50%;
   pointer-events: none;
+  /* Finding 4: Animation is infinite but component mounts/unmounts based on isHolding */
   animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
