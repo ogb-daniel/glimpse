@@ -84,10 +84,20 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener((msg: AppMessage, sender) => {
     if (msg.type === 'OPEN_SIDE_PANEL') {
       if (sender.tab?.id) {
-        // @ts-ignore - browser.sidePanel might not be in the types yet
-        browser.sidePanel.open({ tabId: sender.tab.id });
+        // Finding 2: Safe check for sidePanel API
+        const sidePanel = (browser as any).sidePanel;
+        if (sidePanel && sidePanel.open) {
+          sidePanel.open({ tabId: sender.tab.id }).catch((err: any) => {
+            console.error('Glimpse: Failed to open side panel:', err);
+          });
+        } else {
+          console.warn('Glimpse: sidePanel API not available.');
+        }
       }
+    } else if (msg.type === 'GET_TAB_ID') {
+      return Promise.resolve(sender.tab?.id);
     }
+    return true; // Keep channel open for async response if needed
   });
 
   // Initialize Local Identity on startup
