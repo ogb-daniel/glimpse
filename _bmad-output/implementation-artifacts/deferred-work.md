@@ -11,3 +11,5 @@
 ## Deferred from: code review of 3-1-dexie-js-schema-auto-save.md (2026-05-30)
 - Improve database testing strategy (remove monkey-patching and hardcoded imports) [src/hooks/use-scrapbook.test.ts]
 - Strict Domain Modeling (separate DTO without id vs Entity with id) [src/shared/types/models.ts]
+## Deferred from: code review of 3-2-side-panel-scrapbook-dashboard.md (2026-05-30)\n- performance risk with `.toArray()` (unbounded fetch) [src/components/features/scrapbook/ScrapbookList.tsx:10]
+- AC 5 requires chat functionality but it's not implemented. Should we implement a basic transition now or is a stub acceptable? — deferred, it will be handled in the relevant story

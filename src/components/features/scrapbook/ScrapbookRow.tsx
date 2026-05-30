@@ -1,5 +1,5 @@
 import { UserScrapbook } from '../../../shared/types/models';
-import './ScrapbookRow.css'; // I will write a small css file or use inline styles
+import './ScrapbookRow.css';
 
 interface ScrapbookRowProps {
   item: UserScrapbook;
@@ -8,17 +8,18 @@ interface ScrapbookRowProps {
 }
 
 export function ScrapbookRow({ item, onDelete, onAskFollowUp }: ScrapbookRowProps) {
-  const date = new Date(item.learnedAt).toLocaleDateString();
+  const date = item.learnedAt ? new Date(item.learnedAt).toLocaleDateString() : 'Unknown';
+  const safeUrl = item.domainUrl.startsWith('http') ? item.domainUrl : `https://${item.domainUrl}`;
 
   return (
     <div className="scrapbook-row text-serif">
       <div className="scrapbook-row-header">
-        <h3 className="text-sans">{item.term}</h3>
+        <h3 className="text-serif" style={{ margin: 0, fontSize: '1.1rem' }}>{item.term}</h3>
         <span className="text-caption">{date}</span>
       </div>
       <p className="scrapbook-row-explanation">{item.explanation}</p>
       <div className="scrapbook-row-footer">
-        <a href={item.domainUrl} target="_blank" rel="noreferrer" className="text-caption source-link">
+        <a href={safeUrl} target="_blank" rel="noreferrer" className="text-caption source-link">
           Source
         </a>
         <div className="scrapbook-row-actions">
@@ -30,7 +31,7 @@ export function ScrapbookRow({ item, onDelete, onAskFollowUp }: ScrapbookRowProp
           </button>
           <button 
             className="btn-ghost text-caption" 
-            onClick={() => item.id && onDelete(item.id)}
+            onClick={() => item.id !== undefined && onDelete(item.id)}
           >
             Delete
           </button>

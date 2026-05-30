@@ -1,0 +1,12 @@
+.sidepanel-header {
+  padding: var(--spacing-4);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.sidepanel-header h1 {
+  margin: 0 0 var(--spacing-1) 0;
+}
+
+.sidepanel-header p {
+  margin: 0;
+}

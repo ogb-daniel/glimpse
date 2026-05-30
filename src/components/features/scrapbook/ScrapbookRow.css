@@ -17,7 +17,7 @@
 
 .scrapbook-row-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 1.1rem;
   color: var(--ink-primary);
 }
 
@@ -25,6 +25,8 @@
   margin: 0;
   line-height: 1.5;
   color: var(--ink-primary);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .scrapbook-row-footer {
