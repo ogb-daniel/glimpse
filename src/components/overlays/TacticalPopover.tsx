@@ -3,9 +3,18 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 interface Props {
   position: { x: number; y: number } | null;
   isVisible: boolean;
+  streamingText?: string;
+  isStreaming?: boolean;
+  error?: { message: string; code?: string } | null;
 }
 
-export const TacticalPopover: React.FC<Props> = ({ position, isVisible }) => {
+export const TacticalPopover: React.FC<Props> = ({ 
+  position, 
+  isVisible,
+  streamingText,
+  isStreaming,
+  error 
+}) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
 
@@ -51,10 +60,16 @@ export const TacticalPopover: React.FC<Props> = ({ position, isVisible }) => {
     >
       <div className="popover-content">
         <header>
-          <span className="text-caption">Glimpse Synthesis</span>
+          <span className="text-caption">
+            {error ? 'Synthesis Error' : isStreaming ? 'Glimpse Synthesis...' : 'Glimpse Explanation'}
+          </span>
         </header>
         <main>
-          <p className="text-serif">Synthesizing...</p>
+          {error ? (
+            <p className="text-error" style={{ color: 'var(--color-error, #ff4d4f)' }}>{error.message}</p>
+          ) : (
+            <p className="text-serif">{streamingText || (isStreaming ? 'Synthesizing...' : '')}</p>
+          )}
         </main>
       </div>
     </div>

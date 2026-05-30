@@ -1,12 +1,26 @@
 import ReactDOM from 'react-dom/client';
 import React from 'react';
 import { useMagicHold } from '@/hooks/use-magic-hold';
+import { useAiStream } from '@/hooks/use-ai-stream';
 import { MagicHoldAnimation } from '@/components/overlays/MagicHoldAnimation';
 import { TacticalPopover } from '@/components/overlays/TacticalPopover';
 import '@/assets/main.css';
 
 const ContentApp: React.FC = () => {
   const { isHolding, isTriggered, position, dismiss } = useMagicHold();
+  const { streamingText, isStreaming, error, startStream, resetStream } = useAiStream();
+
+  React.useEffect(() => {
+    if (isTriggered) {
+      const selection = window.getSelection();
+      const text = selection?.toString().trim();
+      if (text) {
+        startStream(text);
+      }
+    } else {
+      resetStream();
+    }
+  }, [isTriggered, startStream, resetStream]);
 
   React.useEffect(() => {
     if (!isTriggered) return;
@@ -23,7 +37,13 @@ const ContentApp: React.FC = () => {
   return (
     <>
       <MagicHoldAnimation position={isHolding ? position : null} />
-      <TacticalPopover position={position} isVisible={isTriggered} />
+      <TacticalPopover 
+        position={position} 
+        isVisible={isTriggered} 
+        streamingText={streamingText}
+        isStreaming={isStreaming}
+        error={error}
+      />
     </>
   );
 };
