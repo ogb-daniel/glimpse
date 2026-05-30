@@ -2,16 +2,27 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('pdfjs-dist', () => ({
+  getDocument: vi.fn(),
+  GlobalWorkerOptions: { workerSrc: '' },
+  version: '1.0.0'
+}));
+
 import { isPdfDocument, getNativePdfSelection } from './pdf-utils';
 
 describe('pdf-utils', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // Reset document properties
+    Object.defineProperty(document, 'contentType', {
+      value: 'text/html',
+      configurable: true,
+    });
   });
 
   describe('isPdfDocument', () => {
     it('should return true if contentType is application/pdf', () => {
-      // Mock document.contentType
       Object.defineProperty(document, 'contentType', {
         value: 'application/pdf',
         configurable: true,
@@ -20,10 +31,6 @@ describe('pdf-utils', () => {
     });
 
     it('should return true if filename ends with .pdf', () => {
-      Object.defineProperty(document, 'contentType', {
-        value: 'text/html',
-        configurable: true,
-      });
       // Mock window.location
       const originalLocation = window.location;
       // @ts-ignore
@@ -36,10 +43,6 @@ describe('pdf-utils', () => {
     });
 
     it('should return false for regular html', () => {
-      Object.defineProperty(document, 'contentType', {
-        value: 'text/html',
-        configurable: true,
-      });
       expect(isPdfDocument()).toBe(false);
     });
   });

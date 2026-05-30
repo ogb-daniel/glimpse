@@ -2,6 +2,13 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('pdfjs-dist', () => ({
+  getDocument: vi.fn(),
+  GlobalWorkerOptions: { workerSrc: '' },
+  version: '1.0.0'
+}));
+
 import { renderHook, act } from '@testing-library/react';
 import { useMagicHold } from './use-magic-hold';
 

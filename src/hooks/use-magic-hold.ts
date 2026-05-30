@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { isPdfDocument, getNativePdfSelection } from '@/shared/utils/pdf-utils';
+import { isPdfDocument, getNativePdfSelection } from '../shared/utils/pdf-utils';
 
 export function useMagicHold() {
   const [isHolding, setIsHolding] = useState(false);
