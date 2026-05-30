@@ -3,7 +3,7 @@ baseline_commit: 0d99d04ef1369ec25de4a280e89bc1129ccb4d33
 ---
 # Story 3.1: Dexie.js Schema & Auto-Save
 
-Status: review
+Status: done
 
 ## Story
 
