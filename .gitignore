@@ -1,4 +1,5 @@
 .agents
 _bmad
-_bmad-outputnode_modules
+_bmad-output
+node_modules
 .wxt
