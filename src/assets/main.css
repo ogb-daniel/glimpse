@@ -1,0 +1,71 @@
+:root {
+  /* Colors - Lunar Palette */
+  --surface-base: #FFFFFF;
+  --surface-raised: #F4F4F2;
+  --ink-primary: #202124;
+  --ink-secondary: #5F6368;
+  --accent-gold: #B8B08D; /* Platinum Gold */
+  --accent-gold-hc: #635F4B; /* High Contrast */
+  --accent-gold-soft: #F0F0E8; /* Pale Parchment */
+  --glow-ring: rgba(184, 176, 141, 0.3); /* Lunar Glow Ring */
+  --border-hairline: rgba(0, 0, 0, 0.1);
+  --surface-overlay: rgba(255, 255, 255, 0.95);
+  
+  /* Elevation */
+  --shadow-popover: 0 4px 20px rgba(0,0,0,0.08);
+
+  /* Radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* Typography Families */
+  --font-serif: "Source Serif Pro", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Base Styles */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--ink-primary);
+  background-color: var(--surface-base);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+/* Typography Classes */
+.text-serif { font-family: var(--font-serif); }
+.text-sans { font-family: var(--font-sans); }
+.text-caption { font-size: 12px; color: var(--ink-secondary); font-family: var(--font-sans); }
+
+/* Font Declarations */
+@font-face {
+  font-family: 'Source Serif Pro';
+  src: url('@/assets/fonts/source-serif-pro-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('@/assets/fonts/inter-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('@/assets/fonts/inter-bold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
