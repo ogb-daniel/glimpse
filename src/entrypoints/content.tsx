@@ -10,7 +10,23 @@ const ContentApp: React.FC = () => {
   const { isHolding, isTriggered, position, dismiss } = useMagicHold();
   const { streamingText, isStreaming, error, startStream, resetStream } = useAiStream();
 
-  const handleDeepChat = () => {
+  const handleDeepChat = async () => {
+    // Save current context to storage so the sidepanel can pick it up
+    const selection = window.getSelection();
+    const term = selection?.toString().trim();
+    
+    if (term && streamingText) {
+      await browser.storage.local.set({
+        active_research_context: {
+          term,
+          explanation: streamingText,
+          url: window.location.href,
+          title: document.title,
+          timestamp: Date.now()
+        }
+      });
+    }
+
     // browser.sidePanel.open is not available in content script directly
     // We send a message to background to open it
     browser.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
