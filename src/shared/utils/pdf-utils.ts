@@ -1,3 +1,13 @@
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure PDF.js worker
+// In WXT, it's better to use a local worker, but for this implementation
+// we'll set it up so it can be resolved.
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+}
+
 /**
  * Utilities for interacting with the browser's native PDF viewer.
  */
@@ -23,9 +33,8 @@ export async function getNativePdfSelection(): Promise<string> {
       return;
     }
 
-    const abortController = new AbortController();
     const timeoutId = setTimeout(() => {
-      abortController.abort();
+      window.removeEventListener('message', messageHandler);
       resolve('');
     }, 200); // Short timeout for responsiveness
 
@@ -49,4 +58,23 @@ export async function getNativePdfSelection(): Promise<string> {
       resolve('');
     }
   });
+}
+
+/**
+ * Fallback: Attempts to extract text from the PDF using PDF.js by fetching the document.
+ */
+export async function getPdfFallbackText(url: string): Promise<string> {
+  try {
+    const loadingTask = pdfjsLib.getDocument(url);
+    const pdf = await loadingTask.promise;
+    
+    // For now, we'll just extract text from the first page as a fallback proof-of-concept.
+    // Real coordinate-to-text mapping is extremely complex for a fallback.
+    const page = await pdf.getPage(1);
+    const textContent = await page.getTextContent();
+    return textContent.items.map((item: any) => (item as any).str).join(' ');
+  } catch (err) {
+    console.error('Glimpse: PDF.js fallback failed', err);
+    return '';
+  }
 }
