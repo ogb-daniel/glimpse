@@ -67,4 +67,47 @@ describe('useScrapbook', () => {
     // Restore
     db.userScrapbook.add = originalAdd;
   });
+
+  it('should delete interaction successfully', async () => {
+    await db.open();
+    const id = await db.userScrapbook.add({
+      term: 'Test Term',
+      explanation: 'Explanation',
+      domainUrl: 'example.com',
+      learnedAt: Date.now(),
+    });
+
+    const { result } = renderHook(() => useScrapbook());
+    
+    let response: DbResult<void> | undefined;
+    await act(async () => {
+      response = await result.current.deleteInteraction(id);
+    });
+
+    expect(response?.success).toBe(true);
+
+    const saved = await db.userScrapbook.toArray();
+    expect(saved).toHaveLength(0);
+  });
+
+  it('should return error if delete fails', async () => {
+    await db.open();
+    const originalDelete = db.userScrapbook.delete;
+    db.userScrapbook.delete = () => Promise.reject(new Error('Simulated failure')) as any;
+    
+    const { result } = renderHook(() => useScrapbook());
+
+    let response: DbResult<void> | undefined;
+    await act(async () => {
+      response = await result.current.deleteInteraction(1);
+    });
+
+    expect(response?.success).toBe(false);
+    if (response?.success === false) {
+      expect(response.error).toBeDefined();
+    }
+    
+    // Restore
+    db.userScrapbook.delete = originalDelete;
+  });
 });
