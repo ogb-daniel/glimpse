@@ -11,6 +11,14 @@ export function useScrapbook() {
     interaction: Omit<UserScrapbook, 'id' | 'learnedAt'>
   ): Promise<DbResult<UserScrapbook>> => {
     try {
+      const existing = await db.userScrapbook.where('term').equalsIgnoreCase(interaction.term).first();
+      
+      if (existing && existing.id !== undefined) {
+        const updated = { ...existing, explanation: interaction.explanation, domainUrl: interaction.domainUrl, learnedAt: Date.now() };
+        await db.userScrapbook.put(updated);
+        return { success: true, data: updated };
+      }
+
       const entry = {
         ...interaction,
         learnedAt: Date.now()
