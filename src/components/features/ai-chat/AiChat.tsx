@@ -25,6 +25,10 @@ export const AiChat: React.FC<Props> = ({ initialContext, onClose }) => {
         { role: 'user', content: `Explain the term: ${initialContext.term}` },
         { role: 'assistant', content: initialContext.explanation }
       ]);
+    } else {
+      setMessages([
+        { role: 'assistant', content: 'Hello! I am Glimpse. How can I help you today?' }
+      ]);
     }
   }, [initialContext]);
 
