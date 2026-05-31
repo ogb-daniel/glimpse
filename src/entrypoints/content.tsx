@@ -14,12 +14,30 @@ import { BloomContext } from '@/shared/types/messaging';
 import { extractPageMetadata } from '@/shared/utils/metadata-utils';
 import '@/assets/main.css';
 
+const STORAGE_KEY_ENABLED = 'glimpse_enabled';
+
 const ContentApp: React.FC = () => {
+  const [enabled, setEnabled] = React.useState(true);
   const { isHolding, isTriggered, position, dismiss } = useMagicHold();
   const { streamingText, isStreaming, error, startStream, startElaborateStream, resetStream, setCachedStream } = useAiStream();
   const { getInteractionByTerm } = useScrapbook();
   const [capturedTerm, setCapturedTerm] = React.useState<string>('');
   const [capturedContext, setCapturedContext] = React.useState<string>('');
+
+  // Load enabled state from storage and listen for toggle messages
+  React.useEffect(() => {
+    browser.storage.local.get(STORAGE_KEY_ENABLED).then((stored) => {
+      setEnabled(stored[STORAGE_KEY_ENABLED] !== false);
+    });
+
+    const listener = (msg: any) => {
+      if (msg?.type === 'GLIMPSE_TOGGLE') {
+        setEnabled(msg.payload.enabled);
+      }
+    };
+    browser.runtime.onMessage.addListener(listener);
+    return () => browser.runtime.onMessage.removeListener(listener);
+  }, []);
   
   // FAB State
   const [isFabOpen, setIsFabOpen] = React.useState(false);
@@ -200,6 +218,11 @@ const ContentApp: React.FC = () => {
 
   // Patch: Guard against rendering in tiny iframes where the UI would be clipped
   if (typeof window !== 'undefined' && window.innerWidth < 100) {
+    return null;
+  }
+
+  // Guard: Extension disabled via popup toggle
+  if (!enabled) {
     return null;
   }
 
