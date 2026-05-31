@@ -36,6 +36,21 @@
   --font-serif: "Outfit", system-ui, sans-serif;
 }
 
+/* Dark Theme - Lunar Orbit */
+:root.dark,
+.dark {
+  --surface-base: #101216;
+  --surface-raised: #1a1c20;
+  --ink-primary: #ffffff;
+  --ink-secondary: #9aa0a6;
+  --accent-gold: #d4af37;
+  --accent-gold-hc: #f0da79;
+  --accent-gold-soft: rgba(212, 175, 55, 0.15);
+  --border-hairline: rgba(255, 255, 255, 0.1);
+  --surface-overlay: rgba(20, 22, 27, 0.95);
+  --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
 /* Base Styles */
 body {
   margin: 0;
@@ -100,7 +115,6 @@ h6 {
   background-color: var(--surface-overlay);
   backdrop-filter: blur(8px);
   border: 1px solid var(--border-hairline);
-  border-top: 3px solid var(--accent-gold);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-popover);
   padding: var(--spacing-4);
@@ -108,9 +122,7 @@ h6 {
 }
 
 .popover-content header {
-  border-bottom: 1px solid var(--border-hairline);
   margin-bottom: var(--spacing-2);
-  padding-bottom: var(--spacing-1);
 }
 
 .popover-footer {
@@ -123,7 +135,7 @@ h6 {
 
 /* Buttons */
 .btn-primary {
-  background-color: var(--accent-gold-hc);
+  background-color: var(--accent-gold);
   color: #ffffff;
   border: none;
   font-family: var(--font-sans);

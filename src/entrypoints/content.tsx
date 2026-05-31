@@ -15,29 +15,36 @@ import { extractPageMetadata } from '@/shared/utils/metadata-utils';
 import '@/assets/main.css';
 
 const STORAGE_KEY_ENABLED = 'glimpse_enabled';
+const STORAGE_KEY_THEME = 'glimpse_theme';
 
 const ContentApp: React.FC = () => {
   const [enabled, setEnabled] = React.useState(true);
+  const [isDark, setIsDark] = React.useState(false);
   const { isHolding, isTriggered, position, dismiss } = useMagicHold();
   const { streamingText, isStreaming, error, startStream, startElaborateStream, resetStream, setCachedStream } = useAiStream();
   const { getInteractionByTerm } = useScrapbook();
   const [capturedTerm, setCapturedTerm] = React.useState<string>('');
   const [capturedContext, setCapturedContext] = React.useState<string>('');
 
-  // Load enabled state from storage and listen for toggle messages
   React.useEffect(() => {
-    browser.storage.local.get(STORAGE_KEY_ENABLED).then((stored) => {
+    browser.storage.local.get([STORAGE_KEY_ENABLED, STORAGE_KEY_THEME]).then((stored) => {
       setEnabled(stored[STORAGE_KEY_ENABLED] !== false);
+      setIsDark(stored[STORAGE_KEY_THEME] === 'dark');
     });
 
     const listener = (msg: any) => {
       if (msg?.type === 'GLIMPSE_TOGGLE') {
         setEnabled(msg.payload.enabled);
+        if (!msg.payload.enabled) {
+          dismiss();
+        }
+      } else if (msg?.type === 'GLIMPSE_THEME') {
+        setIsDark(msg.payload.theme === 'dark');
       }
     };
     browser.runtime.onMessage.addListener(listener);
     return () => browser.runtime.onMessage.removeListener(listener);
-  }, []);
+  }, [dismiss]);
   
   // FAB State
   const [isFabOpen, setIsFabOpen] = React.useState(false);
@@ -204,6 +211,9 @@ const ContentApp: React.FC = () => {
     fetchAndStart();
   }, [isTriggered, startStream, resetStream, dismiss]);
 
+
+
+  // Handle stream updates
   React.useEffect(() => {
     if (!isTriggered) return;
 
@@ -227,9 +237,10 @@ const ContentApp: React.FC = () => {
   }
 
   return (
-    <>
+    <div className={isDark ? 'dark' : ''} style={{ pointerEvents: 'none', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
       <MagicHoldAnimation position={isHolding ? position : null} />
       <TacticalPopover 
+        term={capturedTerm}
         position={position} 
         isVisible={isTriggered} 
         streamingText={streamingText}
@@ -247,7 +258,7 @@ const ContentApp: React.FC = () => {
       />
       <FabButton isOpen={isFabOpen} onClick={() => setIsFabOpen(!isFabOpen)} />
       <FabPanel isOpen={isFabOpen} bloomContext={fabContext} onCloseChat={() => setFabContext(null)} />
-    </>
+    </div>
   );
 };
 

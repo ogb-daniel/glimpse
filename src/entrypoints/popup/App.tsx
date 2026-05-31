@@ -5,9 +5,11 @@ import {
 } from "@/shared/utils/ai-health-service";
 
 const STORAGE_KEY_ENABLED = "glimpse_enabled";
+const STORAGE_KEY_THEME = "glimpse_theme";
 
 function App() {
   const [enabled, setEnabled] = useState(true);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [aiStatus, setAiStatus] = useState<AiCapabilityStatus | "checking">(
     "checking",
   );
@@ -15,10 +17,16 @@ function App() {
 
   useEffect(() => {
     const init = async () => {
-      // Load persisted toggle state
-      const stored = await browser.storage.local.get(STORAGE_KEY_ENABLED);
+      // Load persisted state
+      const stored = await browser.storage.local.get([STORAGE_KEY_ENABLED, STORAGE_KEY_THEME]);
       const isEnabled = stored[STORAGE_KEY_ENABLED] !== false; // default true
+      const storedTheme = stored[STORAGE_KEY_THEME] || "light";
       setEnabled(isEnabled);
+      setTheme(storedTheme as "light" | "dark");
+
+      if (storedTheme === "dark") {
+        document.documentElement.classList.add("dark");
+      }
 
       // Check AI health
       const result = await checkAiCapabilities();
@@ -46,9 +54,31 @@ function App() {
             type: "GLIMPSE_TOGGLE",
             payload: { enabled: newState },
           })
-          .catch(() => {
-            // Tab might not have content script loaded — that's fine
-          });
+          .catch(() => {});
+      }
+    }
+  };
+
+  const handleThemeToggle = async () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    await browser.storage.local.set({ [STORAGE_KEY_THEME]: newTheme });
+    
+    if (newTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+
+    const tabs = await browser.tabs.query({});
+    for (const tab of tabs) {
+      if (tab.id) {
+        browser.tabs
+          .sendMessage(tab.id, {
+            type: "GLIMPSE_THEME",
+            payload: { theme: newTheme },
+          })
+          .catch(() => {});
       }
     }
   };
@@ -82,7 +112,7 @@ function App() {
       <div
         style={{
           padding: "20px 20px 16px",
-          background: "linear-gradient(135deg, #F8F7F4 0%, #EDECEA 100%)",
+          background: theme === "dark" ? "linear-gradient(135deg, #1C1E22 0%, #15171A 100%)" : "linear-gradient(135deg, #F8F7F4 0%, #EDECEA 100%)",
           borderBottom: "1px solid var(--border-hairline, rgba(0,0,0,0.1))",
         }}
       >
@@ -120,37 +150,64 @@ function App() {
             </span>
           </div>
 
-          {/* Toggle Switch */}
-          <button
-            onClick={handleToggle}
-            aria-label={enabled ? "Disable Glimpse" : "Enable Glimpse"}
-            style={{
-              position: "relative",
-              width: "44px",
-              height: "24px",
-              borderRadius: "12px",
-              border: "none",
-              cursor: "pointer",
-              backgroundColor: enabled ? "#34A853" : "#DADCE0",
-              transition: "background-color 0.2s ease",
-              flexShrink: 0,
-              padding: 0,
-            }}
-          >
-            <span
+          {/* Toggles */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {/* Theme Toggle */}
+            <button
+              onClick={handleThemeToggle}
+              aria-label="Toggle Theme"
               style={{
-                position: "absolute",
-                top: "3px",
-                left: enabled ? "23px" : "3px",
-                width: "18px",
-                height: "18px",
+                width: "28px",
+                height: "28px",
                 borderRadius: "50%",
-                backgroundColor: "#FFFFFF",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                transition: "left 0.2s ease",
+                border: "1px solid var(--border-hairline, rgba(0,0,0,0.1))",
+                background: "var(--surface-base, #FFF)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--ink-secondary, #5F6368)",
+                transition: "all 0.2s ease"
               }}
-            />
-          </button>
+            >
+              {theme === "dark" ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+              )}
+            </button>
+            {/* Power Toggle */}
+            <button
+              onClick={handleToggle}
+              aria-label={enabled ? "Disable Glimpse" : "Enable Glimpse"}
+              style={{
+                position: "relative",
+                width: "44px",
+                height: "24px",
+                borderRadius: "12px",
+                border: "none",
+                cursor: "pointer",
+                backgroundColor: enabled ? "#34A853" : "var(--ink-secondary, #DADCE0)",
+                transition: "background-color 0.2s ease",
+                flexShrink: 0,
+                padding: 0,
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: "3px",
+                  left: enabled ? "23px" : "3px",
+                  width: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                  backgroundColor: "#FFFFFF",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                  transition: "left 0.2s ease",
+                }}
+              />
+            </button>
+          </div>
         </div>
 
         <p

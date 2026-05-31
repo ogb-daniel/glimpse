@@ -1,7 +1,8 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
-import { useThemeSniffer } from '@/hooks/use-theme-sniffer';
+import React, { useLayoutEffect, useRef, useState } from "react";
+
 
 interface Props {
+  term?: string;
   position: { x: number; y: number } | null;
   isVisible: boolean;
   streamingText?: string;
@@ -12,32 +13,37 @@ interface Props {
   onDismiss?: () => void;
 }
 
-export const TacticalPopover: React.FC<Props> = ({ 
-  position, 
+export const TacticalPopover: React.FC<Props> = ({
+  term,
+  position,
   isVisible,
   streamingText,
   isStreaming,
   error,
   onAskFollowUp,
   onExplainFurther,
-  onDismiss
+  onDismiss,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
-  
+  const [coords, setCoords] = useState<{ left: number; top: number } | null>(
+    null,
+  );
+
   // Drag state
   const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ x: number, y: number, startLeft: number, startTop: number } | null>(null);
-
-  // Finding 3: Adapt to host theme by sniffing CSS variables
-  useThemeSniffer(popoverRef);
+  const dragStartRef = useRef<{
+    x: number;
+    y: number;
+    startLeft: number;
+    startTop: number;
+  } | null>(null);
 
   useLayoutEffect(() => {
     // Only set initial coords once per appearance to allow dragging later
     if (isVisible && position && popoverRef.current && !coords) {
       const popover = popoverRef.current;
       const { width } = popover.getBoundingClientRect();
-      
+
       let left = position.x - width / 2;
       let top = position.y + 10;
 
@@ -48,7 +54,6 @@ export const TacticalPopover: React.FC<Props> = ({
     } else if (!isVisible) {
       setCoords(null);
     }
-    // Intentionally excluding coords so it doesn't reset position during drag
   }, [isVisible, position]);
 
   useEffect(() => {
@@ -60,7 +65,7 @@ export const TacticalPopover: React.FC<Props> = ({
       const dy = e.pageY - dragStartRef.current.y;
       setCoords({
         left: dragStartRef.current.startLeft + dx,
-        top: dragStartRef.current.startTop + dy
+        top: dragStartRef.current.startTop + dy,
       });
     };
 
@@ -69,11 +74,11 @@ export const TacticalPopover: React.FC<Props> = ({
       dragStartRef.current = null;
     };
 
-    window.addEventListener('mousemove', handleDragMove);
-    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener("mousemove", handleDragMove);
+    window.addEventListener("mouseup", handleDragEnd);
     return () => {
-      window.removeEventListener('mousemove', handleDragMove);
-      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener("mousemove", handleDragMove);
+      window.removeEventListener("mouseup", handleDragEnd);
     };
   }, [isDragging]);
 
@@ -84,9 +89,9 @@ export const TacticalPopover: React.FC<Props> = ({
       x: e.pageX,
       y: e.pageY,
       startLeft: coords.left,
-      startTop: coords.top
+      startTop: coords.top,
     };
-    e.stopPropagation(); // Prevent the click from dismissing the popover
+    e.stopPropagation();
   };
 
   if (!isVisible || !position) return null;
@@ -99,45 +104,91 @@ export const TacticalPopover: React.FC<Props> = ({
       aria-live="polite"
       aria-busy={isStreaming}
       style={{
-        position: 'absolute',
+        position: "absolute",
         left: coords?.left ?? position.x,
         top: coords?.top ?? position.y,
         opacity: coords ? 1 : 0,
-        pointerEvents: 'auto',
+        pointerEvents: "auto",
       }}
     >
       <div className="popover-content">
-        <header 
-          style={{ cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}
+        <header
+          style={{
+            cursor: isDragging ? "grabbing" : "grab",
+            userSelect: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
           onMouseDown={handleDragStart}
         >
-          <span className="text-caption">
-            {error ? 'Synthesis Error' : isStreaming ? 'Glimpse Synthesis...' : 'Glimpse Explanation'}
-          </span>
+          <div
+            style={{
+              width: "3px",
+              height: "18px",
+              backgroundColor: "var(--accent-gold)",
+              borderRadius: "2px",
+            }}
+          />
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "16px",
+              fontWeight: 600,
+              fontFamily: "var(--font-heading)",
+              color: "var(--ink-primary)",
+            }}
+          >
+            {term || (isStreaming ? "Synthesizing..." : "Explanation")}
+          </h3>
         </header>
-        <main>
+        <main style={{ marginTop: "12px", marginBottom: "16px" }}>
           {error ? (
-            <p className="text-error" style={{ color: 'var(--color-error, #ff4d4f)' }}>{error.message}</p>
+            <p
+              className="text-error"
+              style={{ color: "var(--color-error, #ff4d4f)", margin: 0 }}
+            >
+              {error.message}
+            </p>
           ) : (
-            <div className="streaming-container" style={{ minHeight: '1.5em' }}>
+            <div className="streaming-container" style={{ minHeight: "1.5em" }}>
               {isStreaming && (
                 <span className="sr-only">Glimpse synthesis in progress.</span>
               )}
-              <p className="text-serif">{streamingText || (isStreaming ? 'Synthesizing...' : '')}</p>
+              <p
+                className="text-serif"
+                style={{
+                  margin: 0,
+                  lineHeight: 1.5,
+                  color: "var(--ink-primary)",
+                }}
+              >
+                {streamingText || (isStreaming ? "Thinking..." : "")}
+              </p>
             </div>
           )}
         </main>
         {!error && !isStreaming && streamingText && (
-          <footer className="popover-footer" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
-            <button className="btn-secondary" onClick={onExplainFurther}>
-              Explain Further
-            </button>
-            <button className="btn-primary" onClick={onAskFollowUp}>
-              Ask Follow-up
-            </button>
-            <button className="btn-ghost" onClick={onDismiss}>
-              Got it
-            </button>
+          <footer
+            className="popover-footer"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: "12px",
+            }}
+          >
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button className="btn-secondary" onClick={onExplainFurther}>
+                Explain Further
+              </button>
+              <button className="btn-primary" onClick={onAskFollowUp}>
+                Ask Follow-up
+              </button>
+              <button className="btn-ghost" onClick={onDismiss}>
+                Got it
+              </button>
+            </div>
           </footer>
         )}
       </div>
