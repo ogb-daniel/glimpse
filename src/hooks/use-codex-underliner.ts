@@ -13,6 +13,29 @@ export function useCodexUnderliner() {
   const isScanning = useRef(false);
 
   useEffect(() => {
+    // Inject styles into the host page (Shadow DOM styles don't leak out)
+    if (!document.getElementById('glimpse-codex-styles')) {
+      const style = document.createElement('style');
+      style.id = 'glimpse-codex-styles';
+      style.textContent = `
+        .${UNDERLINE_CLASS} {
+          text-decoration: none;
+          cursor: help;
+          transition: background-color 0.2s ease, text-decoration 0.2s ease;
+        }
+        .${UNDERLINE_CLASS}.${ACTIVE_CLASS} {
+          text-decoration: underline 2px solid #B8B08D;
+        }
+        .${UNDERLINE_CLASS}:hover {
+          background-color: #F0F0E8;
+          color: #202124;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchTerms = async () => {
       // Optimization: Fetch only terms, and maybe limit if huge, but for now just toArray is fine if we only do it once
       const allEntries = await db.userScrapbook.toArray();
