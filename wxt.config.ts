@@ -8,7 +8,7 @@ export default defineConfig({
     name: "Glimpse",
     description:
       "Privacy-first, local-AI Chrome extension for flow-state learning.",
-    permissions: ["storage", "sidePanel"],
+    permissions: ["storage"],
     web_accessible_resources: [
       {
         resources: ["assets/fonts/*.woff2"],
