@@ -1,6 +1,6 @@
 import { getOrCreateIdentity } from "../shared/utils/identity-service";
 import { AppMessage } from "../shared/types/messaging";
-import { formatPrompt } from "../shared/utils/ai-prompt-utils";
+import { formatPrompt, formatElaboratePrompt } from "../shared/utils/ai-prompt-utils";
 
 export default defineBackground(() => {
   console.log("Glimpse: Background service worker initializing...", {
@@ -110,6 +110,10 @@ export default defineBackground(() => {
       if (msg.type === "START_AI_STREAM") {
         const { contextText, metadata } = msg.payload;
         const prompt = formatPrompt(contextText, metadata);
+        await runAiStream(port, prompt);
+      } else if (msg.type === "ELABORATE_AI_STREAM") {
+        const { contextText, metadata } = msg.payload;
+        const prompt = formatElaboratePrompt(contextText, metadata);
         await runAiStream(port, prompt);
       } else if (msg.type === "CONTINUE_AI_STREAM") {
         const { prompt, history } = msg.payload;
