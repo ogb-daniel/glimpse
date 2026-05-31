@@ -165,6 +165,7 @@ h6 {
   border: none;
   color: var(--ink-secondary);
   font-family: var(--font-sans);
+  font-weight: bold;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -180,6 +181,10 @@ h6 {
 .btn-ghost:hover {
   background-color: var(--surface-raised);
   color: var(--accent-gold-hc);
+}
+
+.btn-ghost.delete:hover {
+  color: rgb(211, 43, 43);
 }
 
 .btn-icon {

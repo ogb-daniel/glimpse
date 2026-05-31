@@ -30,7 +30,7 @@ export function ScrapbookRow({ item, onDelete, onAskFollowUp }: ScrapbookRowProp
             Ask Follow-up
           </button>
           <button 
-            className="btn-ghost text-caption" 
+            className="btn-ghost delete text-caption" 
             onClick={() => item.id !== undefined && onDelete(item.id)}
           >
             Delete
