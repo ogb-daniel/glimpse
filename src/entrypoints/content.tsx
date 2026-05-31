@@ -257,6 +257,26 @@ export default defineContentScript({
   allFrames: true,
 
   async main(ctx) {
+    // Inject Google Fonts into the host page — fonts in the main document
+    // are accessible inside Shadow DOM roots
+    if (!document.getElementById('glimpse-fonts')) {
+      const preconnect1 = document.createElement('link');
+      preconnect1.rel = 'preconnect';
+      preconnect1.href = 'https://fonts.googleapis.com';
+      
+      const preconnect2 = document.createElement('link');
+      preconnect2.rel = 'preconnect';
+      preconnect2.href = 'https://fonts.gstatic.com';
+      preconnect2.crossOrigin = '';
+      
+      const fontLink = document.createElement('link');
+      fontLink.id = 'glimpse-fonts';
+      fontLink.rel = 'stylesheet';
+      fontLink.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Changa+One:ital@0;1&family=Inter:wght@400;500;600;700&display=swap';
+      
+      document.head.append(preconnect1, preconnect2, fontLink);
+    }
+
     const ui = await createShadowRootUi(ctx, {
       name: 'glimpse-overlays',
       position: 'inline',

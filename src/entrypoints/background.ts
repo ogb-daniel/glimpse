@@ -1,6 +1,9 @@
 import { getOrCreateIdentity } from "../shared/utils/identity-service";
 import { AppMessage } from "../shared/types/messaging";
-import { formatPrompt, formatElaboratePrompt } from "../shared/utils/ai-prompt-utils";
+import {
+  formatPrompt,
+  formatElaboratePrompt,
+} from "../shared/utils/ai-prompt-utils";
 
 export default defineBackground(() => {
   console.log("Glimpse: Background service worker initializing...", {
@@ -59,7 +62,10 @@ export default defineBackground(() => {
         return;
       }
 
-      const session = await LanguageModel.create(options);
+      const session = await LanguageModel.create({
+        ...options,
+        languages: ["en", "ja"],
+      });
       const stream = session.promptStreaming(prompt);
 
       let fullText = "";
