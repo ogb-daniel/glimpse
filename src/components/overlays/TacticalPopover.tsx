@@ -7,7 +7,9 @@ interface Props {
   streamingText?: string;
   isStreaming?: boolean;
   error?: { message: string; code?: string } | null;
-  onDeepChat?: () => void;
+  onAskFollowUp?: () => void;
+  onExplainFurther?: () => void;
+  onDismiss?: () => void;
 }
 
 export const TacticalPopover: React.FC<Props> = ({ 
@@ -16,7 +18,9 @@ export const TacticalPopover: React.FC<Props> = ({
   streamingText,
   isStreaming,
   error,
-  onDeepChat
+  onAskFollowUp,
+  onExplainFurther,
+  onDismiss
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
@@ -124,9 +128,15 @@ export const TacticalPopover: React.FC<Props> = ({
           )}
         </main>
         {!error && !isStreaming && streamingText && (
-          <footer className="popover-footer">
-            <button className="btn-ghost" onClick={onDeepChat}>
-              Deep Chat ↗
+          <footer className="popover-footer" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
+            <button className="btn-secondary" onClick={onExplainFurther}>
+              Explain Further
+            </button>
+            <button className="btn-primary" onClick={onAskFollowUp}>
+              Ask Follow-up
+            </button>
+            <button className="btn-ghost" onClick={onDismiss}>
+              Got it
             </button>
           </footer>
         )}
