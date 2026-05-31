@@ -7,6 +7,8 @@ import { useScrapbook } from '@/hooks/use-scrapbook';
 import { MagicHoldAnimation } from '@/components/overlays/MagicHoldAnimation';
 import { TacticalPopover } from '@/components/overlays/TacticalPopover';
 import { CodexTooltip } from '@/components/overlays/CodexTooltip';
+import { FabButton } from '@/components/overlays/FabButton';
+import { FabPanel } from '@/components/overlays/FabPanel';
 import { isPdfDocument, getNativePdfSelection, getPdfFallbackText } from '@/shared/utils/pdf-utils';
 import { BloomContext } from '@/shared/types/messaging';
 import { extractPageMetadata } from '@/shared/utils/metadata-utils';
@@ -14,10 +16,15 @@ import '@/assets/main.css';
 
 const ContentApp: React.FC = () => {
   const { isHolding, isTriggered, position, dismiss } = useMagicHold();
-  const { streamingText, isStreaming, error, startStream, resetStream } = useAiStream();
+  const { streamingText, isStreaming, error, startStream, startElaborateStream, resetStream, setCachedStream } = useAiStream();
   const { getInteractionByTerm } = useScrapbook();
   const [capturedTerm, setCapturedTerm] = React.useState<string>('');
+  const [capturedContext, setCapturedContext] = React.useState<string>('');
   
+  // FAB State
+  const [isFabOpen, setIsFabOpen] = React.useState(false);
+  const [fabContext, setFabContext] = React.useState<BloomContext | null>(null);
+
   // Codex Tooltip State
   const [tooltipData, setTooltipData] = React.useState<{
     term: string;
@@ -31,25 +38,28 @@ const ContentApp: React.FC = () => {
   // Initialize Underliner
   useCodexUnderliner();
 
-  const handleDeepChat = async () => {
+  const handleAskFollowUp = async () => {
     if (capturedTerm && streamingText) {
       const bloomContext: BloomContext = {
         term: capturedTerm,
         explanation: streamingText,
-        metadata: extractPageMetadata(),
+        metadata: {
+          ...extractPageMetadata(),
+          surroundingText: capturedContext
+        },
         timestamp: Date.now()
       };
       
-      try {
-        await (browser.storage as any).session.set({ bloom_context: bloomContext });
-      } catch (e) {
-        console.warn('Glimpse: session storage not available, falling back to local', e);
-        await browser.storage.local.set({ bloom_context: bloomContext });
-      }
+      setFabContext(bloomContext);
+      setIsFabOpen(true);
     }
-
-    browser.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
     dismiss();
+  };
+
+  const handleExplainFurther = () => {
+    if (capturedTerm) {
+      startElaborateStream(capturedTerm, { ...extractPageMetadata(), surroundingText: capturedContext });
+    }
   };
 
   React.useEffect(() => {
@@ -112,6 +122,7 @@ const ContentApp: React.FC = () => {
       if (isTriggered && !hasTriggeredRef.current) {
         hasTriggeredRef.current = true;
         let text = '';
+        let surroundingText = '';
         if (isPdfDocument()) {
           // Attempt native bridge first
           text = await getNativePdfSelection();
@@ -123,11 +134,43 @@ const ContentApp: React.FC = () => {
         } else {
           const selection = window.getSelection();
           text = selection?.toString().trim() || '';
+          
+          if (selection && selection.rangeCount > 0) {
+            // Get a much larger context window from the full page text
+            const fullText = document.body.innerText || document.body.textContent || '';
+            const index = fullText.indexOf(text);
+            if (index !== -1) {
+              const start = Math.max(0, index - 1000);
+              const end = Math.min(fullText.length, index + text.length + 1000);
+              surroundingText = fullText.substring(start, end);
+              if (start > 0) surroundingText = '...' + surroundingText;
+              if (end < fullText.length) surroundingText = surroundingText + '...';
+            } else {
+              // Fallback to parent element if indexOf fails (e.g., due to whitespace differences)
+              const range = selection.getRangeAt(0);
+              const container = range.commonAncestorContainer;
+              const parentElement = container.nodeType === Node.TEXT_NODE ? container.parentElement : container as HTMLElement;
+              if (parentElement) {
+                 surroundingText = parentElement.innerText || parentElement.textContent || '';
+                 if (surroundingText.length > 2000) {
+                    surroundingText = surroundingText.substring(0, 2000) + '...';
+                 }
+              }
+            }
+          }
         }
 
         if (text.length > 0) {
           setCapturedTerm(text);
-          startStream(text);
+          setCapturedContext(surroundingText);
+
+          // Check for existing term first
+          const existing = await getInteractionByTerm(text);
+          if (existing.success && existing.data) {
+             setCachedStream(existing.data.explanation);
+          } else {
+             startStream(text, surroundingText);
+          }
         } else {
           // If we triggered but somehow got no text, dismiss
           dismiss();
@@ -135,6 +178,7 @@ const ContentApp: React.FC = () => {
       } else if (!isTriggered) {
         hasTriggeredRef.current = false;
         setCapturedTerm('');
+        setCapturedContext('');
         resetStream();
       }
     };
@@ -168,7 +212,9 @@ const ContentApp: React.FC = () => {
         streamingText={streamingText}
         isStreaming={isStreaming}
         error={error}
-        onDeepChat={handleDeepChat}
+        onAskFollowUp={handleAskFollowUp}
+        onExplainFurther={handleExplainFurther}
+        onDismiss={dismiss}
       />
       <CodexTooltip 
         term={tooltipData?.term || ''}
@@ -176,6 +222,8 @@ const ContentApp: React.FC = () => {
         domainUrl={tooltipData?.domainUrl || ''}
         position={tooltipData?.position || null}
       />
+      <FabButton isOpen={isFabOpen} onClick={() => setIsFabOpen(!isFabOpen)} />
+      <FabPanel isOpen={isFabOpen} bloomContext={fabContext} onCloseChat={() => setFabContext(null)} />
     </>
   );
 };
