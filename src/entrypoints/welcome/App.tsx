@@ -47,10 +47,7 @@ function App() {
       // since the user is still dragging to select during mousedown.
       timerRef.current = setTimeout(() => {
         const currentSelection = window.getSelection();
-        if (
-          currentSelection &&
-          currentSelection.toString().trim().length > 0
-        ) {
+        if (currentSelection && currentSelection.toString().trim().length > 0) {
           setOnboarded(true);
         }
         timerRef.current = null;
@@ -115,8 +112,8 @@ function App() {
         style={{ fontSize: "16px", lineHeight: "1.6", marginBottom: "32px" }}
       >
         Your seamless learning partner is being initialized. Glimpse uses
-        local-only AI (Gemini Nano) to provide privacy-first explanations of
-        anything you read.
+        chrome's local AI (Gemini Nano) to provide explanations of anything you
+        read.
       </p>
 
       <section
@@ -136,7 +133,7 @@ function App() {
         <div style={{ marginBottom: "16px" }}>
           {isSystemReady ? (
             <p style={{ color: "green", fontSize: "15px", fontWeight: "bold" }}>
-              ✅ System Ready: Local AI is active.
+              ✅ System Ready: AI is active.
             </p>
           ) : (
             <p style={{ color: "var(--ink-secondary)", fontSize: "15px" }}>

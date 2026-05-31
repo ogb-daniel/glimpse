@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { BloomContext } from '../../../shared/types/messaging';
-import { useAiStream } from '../../../hooks/use-ai-stream';
-import './AiChat.css';
+import React, { useState, useEffect, useRef } from "react";
+import { BloomContext } from "../../../shared/types/messaging";
+import { useAiStream } from "../../../hooks/use-ai-stream";
+import { extractPageMetadata } from "../../../shared/utils/metadata-utils";
+import "./AiChat.css";
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -15,19 +16,22 @@ interface Props {
 
 export const AiChat: React.FC<Props> = ({ initialContext, onClose }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const { streamingText, isStreaming, error, continueStream } = useAiStream();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialContext) {
       setMessages([
-        { role: 'user', content: `Explain the term: ${initialContext.term}` },
-        { role: 'assistant', content: initialContext.explanation }
+        { role: "user", content: `Explain the term: ${initialContext.term}` },
+        { role: "assistant", content: initialContext.explanation },
       ]);
     } else {
       setMessages([
-        { role: 'assistant', content: 'Hello! I am Glimpse. How can I help you today?' }
+        {
+          role: "assistant",
+          content: "Hello! I am Glimpse. How can I help you today?",
+        },
       ]);
     }
   }, [initialContext]);
@@ -42,20 +46,34 @@ export const AiChat: React.FC<Props> = ({ initialContext, onClose }) => {
     e?.preventDefault();
     if (!inputValue.trim() || isStreaming) return;
 
-    const userMessage: Message = { role: 'user', content: inputValue };
+    const userMessage: Message = { role: "user", content: inputValue };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
-    setInputValue('');
+    setInputValue("");
 
-    const metadata = initialContext?.metadata;
+    let metadata = initialContext?.metadata;
+    if (!metadata) {
+      const pageMeta = extractPageMetadata();
+      // Grab a chunk of the visible page text for context, same approach as the popup flow
+      const fullText =
+        document.body?.innerText || document.body?.textContent || "";
+      const surroundingText =
+        fullText.length > 2000 ? fullText.substring(0, 2000) + "..." : fullText;
+      metadata = { ...pageMeta, surroundingText };
+    }
+    console.log(metadata);
+
     continueStream(inputValue, newMessages, metadata);
   };
 
   useEffect(() => {
     if (!isStreaming && streamingText && messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'user') {
-        setMessages(prev => [...prev, { role: 'assistant', content: streamingText }]);
+      if (lastMessage.role === "user") {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: streamingText },
+        ]);
       }
     }
   }, [isStreaming, streamingText, messages]);
@@ -63,11 +81,17 @@ export const AiChat: React.FC<Props> = ({ initialContext, onClose }) => {
   return (
     <div className="ai-chat-container">
       <header className="chat-header">
-        <button className="btn-icon" onClick={onClose} aria-label="Back to Scrapbook">
+        <button
+          className="btn-icon"
+          onClick={onClose}
+          aria-label="Back to Scrapbook"
+        >
           ←
         </button>
-        <div className="header-info" style={{ marginLeft: 'var(--spacing-2)' }}>
-          <span className="text-caption">Deep Dive: {initialContext?.term}</span>
+        <div className="header-info" style={{ marginLeft: "var(--spacing-2)" }}>
+          <span className="text-caption">
+            {initialContext ? `Deep Dive: ${initialContext.term}` : "New Chat"}
+          </span>
         </div>
       </header>
 
@@ -75,20 +99,26 @@ export const AiChat: React.FC<Props> = ({ initialContext, onClose }) => {
         {messages.map((msg, i) => (
           <div key={i} className={`message ${msg.role}`}>
             <div className="message-bubble">
-              <p className="text-serif" style={{ margin: 0 }}>{msg.content}</p>
+              <p className="text-serif" style={{ margin: 0 }}>
+                {msg.content}
+              </p>
             </div>
           </div>
         ))}
         {isStreaming && (
           <div className="message assistant">
             <div className="message-bubble">
-              <p className="text-serif" style={{ margin: 0 }}>{streamingText}</p>
+              <p className="text-serif" style={{ margin: 0 }}>
+                {streamingText}
+              </p>
             </div>
           </div>
         )}
         {error && (
           <div className="error-message">
-            <p className="text-error" style={{ margin: 0 }}>{error.message}</p>
+            <p className="text-error" style={{ margin: 0 }}>
+              {error.message}
+            </p>
           </div>
         )}
       </div>
