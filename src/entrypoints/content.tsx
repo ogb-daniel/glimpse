@@ -61,7 +61,7 @@ const ContentApp: React.FC = () => {
   const latestHoverTerm = React.useRef<string | null>(null);
 
   // Initialize Underliner
-  useCodexUnderliner();
+  useCodexUnderliner(enabled);
 
   const handleAskFollowUp = async () => {
     if (capturedTerm && streamingText) {

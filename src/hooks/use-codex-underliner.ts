@@ -5,7 +5,7 @@ const DENSITY_LIMIT = 10;
 const UNDERLINE_CLASS = 'glimpse-codex-underline';
 const ACTIVE_CLASS = 'active';
 
-export function useCodexUnderliner() {
+export function useCodexUnderliner(enabled: boolean = true) {
   const [terms, setTerms] = useState<string[]>([]);
   const visibleUnderlines = useRef<Set<HTMLElement>>(new Set());
   const observer = useRef<IntersectionObserver | null>(null);
@@ -37,29 +37,25 @@ export function useCodexUnderliner() {
 
   useEffect(() => {
     const fetchTerms = async () => {
-      // Optimization: Fetch only terms, and maybe limit if huge, but for now just toArray is fine if we only do it once
       const allEntries = await db.userScrapbook.toArray();
-      // Sort terms by length descending to prevent sub-term shadowing (Finding #6)
       const sortedTerms = allEntries.map(e => e.term).sort((a, b) => b.length - a.length);
       setTerms(sortedTerms);
     };
-    fetchTerms();
+    if (enabled) {
+      fetchTerms();
+    }
 
     return () => {
       observer.current?.disconnect();
       mutationObserver.current?.disconnect();
     };
-  }, []);
+  }, [enabled]);
 
   const updateUnderlineStyles = useCallback(() => {
-    // Finding #2: Order-independent density. We should ideally sort by DOM position, 
-    // but for now, we just ensure we don't thrash all elements.
+    if (!enabled) return;
     const allVisible = Array.from(visibleUnderlines.current);
     const underlinesToActivate = new Set(allVisible.slice(0, DENSITY_LIMIT));
     
-    // Finding #3: Global style update optimization. 
-    // Instead of querySelectorAll on every tick, we only touch elements in visibleUnderlines 
-    // or elements that were previously active.
     document.querySelectorAll(`.${UNDERLINE_CLASS}.${ACTIVE_CLASS}`).forEach(el => {
       if (!underlinesToActivate.has(el as HTMLElement)) {
         el.classList.remove(ACTIVE_CLASS);
@@ -69,10 +65,11 @@ export function useCodexUnderliner() {
     underlinesToActivate.forEach(el => {
       el.classList.add(ACTIVE_CLASS);
     });
-  }, []);
+  }, [enabled]);
 
   const setupObserver = useCallback(() => {
     if (observer.current) observer.current.disconnect();
+    if (!enabled) return;
 
     observer.current = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -88,10 +85,10 @@ export function useCodexUnderliner() {
     document.querySelectorAll(`.${UNDERLINE_CLASS}`).forEach(el => {
       observer.current?.observe(el);
     });
-  }, [updateUnderlineStyles]);
+  }, [updateUnderlineStyles, enabled]);
 
   const scanDocument = useCallback((root: Node = document.body) => {
-    if (terms.length === 0 || isScanning.current) return;
+    if (!enabled || terms.length === 0 || isScanning.current) return;
     isScanning.current = true;
 
     const walker = document.createTreeWalker(
@@ -103,7 +100,6 @@ export function useCodexUnderliner() {
           if (!parent) return NodeFilter.FILTER_REJECT;
           const tagName = parent.tagName.toLowerCase();
           
-          // Finding #8: Skip editable/interactive elements
           const isEditable = parent.isContentEditable || 
                              ['input', 'textarea', 'select', 'button'].includes(tagName) ||
                              parent.closest('[contenteditable="true"]');
@@ -124,8 +120,6 @@ export function useCodexUnderliner() {
     const nodesToReplace: { node: Text; matches: { term: string; index: number }[] }[] = [];
     let currentNode: Node | null;
 
-    // Finding #7: Improve regex word boundaries to handle non-word chars like C++
-    // We use a manual boundary check instead of \b if terms have special chars.
     const termRegex = new RegExp(`(${terms.map(t => escapeRegExp(t)).join('|')})`, 'gi');
 
     while ((currentNode = walker.nextNode())) {
@@ -138,7 +132,6 @@ export function useCodexUnderliner() {
         const matchedText = match[0];
         const index = match.index;
         
-        // Manual word boundary check (Simplified)
         const charBefore = content[index - 1];
         const charAfter = content[index + matchedText.length];
         const isWordBoundaryBefore = !charBefore || /[^a-zA-Z0-9_]/.test(charBefore);
@@ -179,10 +172,28 @@ export function useCodexUnderliner() {
       setupObserver();
     }
     isScanning.current = false;
-  }, [terms, setupObserver]);
+  }, [terms, setupObserver, enabled]);
 
-  // Finding #4: Support for Dynamic Content (SPAs)
+  // Clean up underlines if disabled
+  const removeUnderlines = useCallback(() => {
+    document.querySelectorAll(`.${UNDERLINE_CLASS}`).forEach((el) => {
+      const parent = el.parentNode;
+      if (parent) {
+        parent.replaceChild(document.createTextNode(el.textContent || ''), el);
+        parent.normalize();
+      }
+    });
+    visibleUnderlines.current.clear();
+  }, []);
+
   useEffect(() => {
+    if (!enabled) {
+      removeUnderlines();
+      observer.current?.disconnect();
+      mutationObserver.current?.disconnect();
+      return;
+    }
+
     if (terms.length === 0) return;
 
     scanDocument();
@@ -205,7 +216,7 @@ export function useCodexUnderliner() {
     });
 
     return () => mutationObserver.current?.disconnect();
-  }, [terms, scanDocument]);
+  }, [terms, scanDocument, enabled, removeUnderlines]);
 
   return { scanDocument };
 }
