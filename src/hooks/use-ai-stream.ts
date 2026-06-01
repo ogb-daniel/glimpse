@@ -162,7 +162,18 @@ export function useAiStream() {
             msg.payload.token.length > prev.length ? msg.payload.token : prev,
           );
         } else if (msg.type === "AI_STREAM_COMPLETE") {
-          // Here we could auto-save or update the interaction if we want to
+          const url = finalMetadata?.url || "";
+          if (contextText && msg.payload.fullText && url) {
+            saveInteraction({
+              term: contextText,
+              explanation: msg.payload.fullText,
+              domainUrl: url,
+            }).then((result) => {
+              if (!result.success) {
+                console.error("Failed to update interaction:", result.error);
+              }
+            });
+          }
           cleanup();
         } else if (msg.type === "AI_STREAM_ERROR") {
           setError({ message: msg.payload.error, code: msg.payload.code });
