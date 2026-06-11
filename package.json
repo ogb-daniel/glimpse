@@ -28,6 +28,7 @@
     "@wxt-dev/module-react": "^1.2.2",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
+    "terser": "^5.48.0",
     "typescript": "^5.4.5",
     "vitest": "^4.1.7",
     "wxt": "^0.20.26"

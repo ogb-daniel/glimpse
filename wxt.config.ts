@@ -24,4 +24,14 @@ export default defineConfig({
       }
     }
   },
+  vite: () => ({
+    build: {
+      minify: 'terser',
+      terserOptions: {
+        format: {
+          ascii_only: true,
+        },
+      },
+    },
+  }),
 });
