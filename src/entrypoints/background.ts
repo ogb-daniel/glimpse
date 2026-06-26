@@ -4,6 +4,7 @@ import {
   formatPrompt,
   formatElaboratePrompt,
 } from "../shared/utils/ai-prompt-utils";
+import { getReadingLevel } from "../shared/utils/reading-level-service";
 
 export default defineBackground(() => {
   console.log("Glimpse: Background service worker initializing...", {
@@ -115,7 +116,8 @@ export default defineBackground(() => {
     port.onMessage.addListener(async (msg: AppMessage) => {
       if (msg.type === "START_AI_STREAM") {
         const { contextText, metadata } = msg.payload;
-        const prompt = formatPrompt(contextText, metadata);
+        const level = await getReadingLevel();
+        const prompt = formatPrompt(contextText, metadata, level);
         await runAiStream(port, prompt);
       } else if (msg.type === "ELABORATE_AI_STREAM") {
         const { contextText, metadata } = msg.payload;
