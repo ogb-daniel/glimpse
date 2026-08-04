@@ -4,7 +4,11 @@
  * Service to check Chrome's built-in AI (Gemini Nano) capabilities.
  */
 
-export type AiCapabilityStatus = "available" | "downloadable" | "downloading" | "unavailable";
+export type AiCapabilityStatus =
+  | "available"
+  | "downloadable"
+  | "downloading"
+  | "unavailable";
 
 export interface AiCapabilities {
   available: AiCapabilityStatus;
@@ -30,7 +34,6 @@ export async function checkAiCapabilities(): Promise<AiHealthResult> {
     }
 
     const availability = await LanguageModel.availability();
-    console.log(availability);
 
     return {
       success: true,

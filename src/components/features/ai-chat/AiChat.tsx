@@ -61,7 +61,6 @@ export const AiChat: React.FC<Props> = ({ initialContext, onClose }) => {
         fullText.length > 2000 ? fullText.substring(0, 2000) + "..." : fullText;
       metadata = { ...pageMeta, surroundingText };
     }
-    console.log(metadata);
 
     continueStream(inputValue, newMessages, metadata);
   };

@@ -42,9 +42,6 @@ export function useMagicHold() {
 
       const isPDF = isPdfDocument();
 
-      console.log(
-        "Glimpse: Magic Hold started (mousedown). Starting 1.5s timer.",
-      );
       setIsHolding(true);
       setPosition({ x: e.pageX, y: e.pageY });
 
@@ -59,9 +56,6 @@ export function useMagicHold() {
       };
 
       const handleMouseUp = () => {
-        console.log(
-          "Glimpse: Mouse released before timer completed. Cancelling hold.",
-        );
         cleanup();
       };
 
@@ -69,29 +63,23 @@ export function useMagicHold() {
         const currentTimerId = timerRef.current;
         let hasSelection = false;
 
-        console.log("Glimpse: 1.5s timer fired! Checking for text selection...");
         if (isPDF) {
           const pdfText = await getNativePdfSelection();
           hasSelection = pdfText.length > 0;
-          console.log(`Glimpse: PDF selection check. Found text? ${hasSelection}`);
         } else {
           const finalSelection = window.getSelection();
           const finalText = finalSelection?.toString().trim() ?? "";
           hasSelection = finalText.length > 0;
-          console.log(`Glimpse: HTML selection check. Found text? ${hasSelection} ("${finalText.substring(0, 20)}...")`);
         }
 
         // Guard: Ensure user is still holding and hasn't cancelled during the await
         if (timerRef.current !== currentTimerId) {
-          console.log("Glimpse: Timer ID mismatch, user cancelled. Aborting trigger.");
           return;
         }
 
         if (hasSelection) {
-          console.log("Glimpse: Valid selection found! Triggering AI Popover.");
           setIsTriggered(true);
         } else {
-          console.log("Glimpse: Timer fired but no text was selected.");
         }
 
         cleanup();

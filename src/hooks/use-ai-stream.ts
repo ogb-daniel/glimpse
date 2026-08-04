@@ -37,7 +37,6 @@ export function useAiStream() {
       const port = browser.runtime.connect({ name: "ai-bridge" });
       portRef.current = port;
       const metadata = extractPageMetadata();
-      console.log(metadata);
 
       if (surroundingText) {
         metadata.surroundingText = surroundingText;
